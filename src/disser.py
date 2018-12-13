@@ -1,4 +1,7 @@
 # coding=utf-8
+import argparse
+import re
+
 from enum import IntEnum
 
 from mtranslate.core import translate
@@ -9,8 +12,11 @@ class LatexType(IntEnum):
     ordinary, newpar, comment, header, special, other = range(6)
 
 
+MATH_STUB = '***'  # used to replace math formulas before auto-translation
+
+
 def is_header(line):
-    for header in ['\part', '\chapter', '\section', '\subsection', '\subsubsection', '\paragraph', '\subparagraph']:
+    for header in ['\\part', '\\chapter', '\\section', '\\subsection', '\\subsubsection', '\\paragraph', '\\subparagraph']:
         if line.startswith(header):
             return True
     return False
@@ -58,7 +64,54 @@ def preprocess_english_latex(text):
     return content
 
 
-def translate_en_ru(content, leave_orig=True):
+def cut_math(line):
+    """
+    Replaces all math formulas $...$ and \[ ... \] with math_stubs.
+
+    :param line:
+    :param math_stub:
+    :return:
+    """
+    # TODO add \[ ... \] support
+    math_list = []
+    result = ""
+
+    math_mode = False
+
+    print line
+    pieces = re.split(r"(\$)", line)
+    for p in pieces:
+        if p == '$':
+            math_mode = not math_mode
+            continue
+
+        if math_mode:
+            math_list.append("$%s$" % p)
+            result += MATH_STUB
+        else:
+            result += p
+
+    # print result
+    # print math_list
+    return result, math_list
+
+
+def embed_math(text, math_list):
+    """
+
+    :param text:
+    :param math_list:
+    :return:
+    """
+    # FIXME what if len(math_list) != number of stubs?
+    for math in math_list:
+        text = text.replace(MATH_STUB, math, 1)
+
+    # print text
+    return text
+
+
+def translate_en_ru(content, leave_orig):
     """
     Translate text by paragraphs, leaving original parts commented if specified.
 
@@ -71,15 +124,24 @@ def translate_en_ru(content, leave_orig=True):
     par_sep = u'\n\n'
     tran_sep = u'\n'  # separator between translation and original
     orig_comment = u'%'
+
     par_tran = []  # translated part of paragraph
     par_orig = []  # original part of paragraph
 
-    def flush_par(par_tran, par_orig):
-        # print par_tran
-        # for p in par_tran:
-        #     print p
-        # par = str(par_tran)
-        par = line_sep.join(par_tran)
+    def flush_par(par_tran, par_orig, do_translation):
+        if do_translation:  # translate whole paragraph
+            line = u' '.join(par_tran)
+
+            line_wo_math, math_list = cut_math(line)
+            translated = translate(line_wo_math, "ru", "en")
+            translated = postprocess_russian(translated)
+
+            line_w_math = embed_math(translated, math_list)
+
+            par = postprocess_russian_latex(line_w_math)
+        else:
+            par = line_sep.join(par_tran)
+
         if leave_orig:
             par += tran_sep + line_sep.join(par_orig)
         result.append(par)
@@ -88,7 +150,7 @@ def translate_en_ru(content, leave_orig=True):
         if t is LatexType.newpar:  # flush current paragraph
             # TODO do not flush if last type was newpar
             if len(par_orig) > 0:
-                flush_par(par_tran, par_orig)
+                flush_par(par_tran, par_orig, True)
                 par_tran = []
                 par_orig = []
 
@@ -96,13 +158,7 @@ def translate_en_ru(content, leave_orig=True):
             par_orig.append(orig_comment + line_orig)
 
         elif t is LatexType.ordinary:  # Ordinary line we translate as is
-            # TODO translate lines altogether replacing \n's with spaces and removing special commands
-            # TODO cut math and not translate it?
-            line_tran = translate(line_orig, "ru", "en")
-            # line_tran = u"переведенная строка [%s]" % line_orig
-            # post-process RU
-            line_tran = postprocess_russian_latex(line_tran)
-            par_tran.append(line_tran)
+            par_tran.append(line_orig.strip())
             par_orig.append(orig_comment + line_orig)
 
         elif t is LatexType.header:  # Try to parse and translate header
@@ -111,7 +167,7 @@ def translate_en_ru(content, leave_orig=True):
             line_tran = line_orig
             par_tran.append(line_tran)
             par_orig.append(orig_comment + line_orig)
-            flush_par(par_tran, par_orig)
+            flush_par(par_tran, par_orig, False)
             par_tran = []
             par_orig = []
 
@@ -126,7 +182,7 @@ def translate_en_ru(content, leave_orig=True):
             par_tran.append(line_tran)
             par_orig.append(orig_comment + line_orig)
 
-    flush_par(par_tran, par_orig)
+    flush_par(par_tran, par_orig, True)
 
     # for line in result:
     #     print '----new paragraph----'
@@ -134,16 +190,12 @@ def translate_en_ru(content, leave_orig=True):
     return par_sep.join(result)
 
 
-def postprocess_russian_latex(text):
-
-    # replace ~\cite
-    text = text.replace(' ~ \\ cite ', '~\\cite')
-
-    # math formulas: prevent floating '\' before command
-    text = text.replace('\\ ', '\\')
-    # math formulas: prevent floating '_'
-    text = text.replace('_ ', '_')
-    text = text.replace(' _', '_')
+def postprocess_russian(text):
+    """
+    Process russian text disregarding latex constructions
+    :param text:
+    :return:
+    """
 
     # sometimes quotes are replaced
     text = text.replace(u'«', '``')
@@ -152,17 +204,46 @@ def postprocess_russian_latex(text):
     text = text.replace(u'т. Д.', u'т.\\,д.')
     text = text.replace(u'т. П.', u'т.\\,п.')
 
-    # TODO if not in math mode: short '-' replace with long '---'
+    # not in math mode: short '-' replace with long '---'
+    text = text.replace(u' - ', u'~--- ')
+
+    return text
+
+
+def postprocess_russian_latex(text):
+    """
+    Process russian text regarding latex constructions
+
+    :param text:
+    :return:
+    """
+
+    # replace ~\cite
+    text = text.replace(' ~ \\ cite ', '~\\cite')
 
     return text
 
 
 def main():
-    source_path = '../data/source.txt'
-    final_path = '../data/final.txt'
+    parser = argparse.ArgumentParser(description='Latex document translation via google.translate.')
+    parser.add_argument('-i', '--input', required=True, help='input .tex file path')
+    parser.add_argument('-o', '--output', default='output.tex', help='output .tex file path')
+    parser.add_argument('--leave-original', action='store_true', help='output .tex file path')
+    # parser.add_argument('--input-lang', default='EN', help='language of input document')
+    # parser.add_argument('--output-lang', default='RU', help='language of output document')
+
+    args = parser.parse_args()
+
+    # Assuming all parameters are provided and take valid values.
+    source_path = args.input
+    final_path = args.output
+    leave_orig = args.leave_original
+
+    # source_path = '../data/source.txt'
+    # final_path = '../data/final.txt'
+    # leave_orig = True
 
     # read source text
-    source_text = ""
     with open(source_path, 'r') as f:
         source_text = f.read()
 
@@ -170,7 +251,7 @@ def main():
     text = preprocess_english_latex(source_text)
 
     # translate
-    text = translate_en_ru(text)
+    text = translate_en_ru(text, leave_orig)
 
     # save final text
     with open(final_path, 'w') as f:

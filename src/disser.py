@@ -14,6 +14,153 @@ class LatexType(IntEnum):
 
 MATH_STUB = '***'  # used to replace math formulas before auto-translation
 
+tex_environment = [("\\begin{enumerate}", "\\end{enumerate}")]
+
+# # # TODO see parser https://github.com/alvinwan/texsoup
+
+
+class TextWithStubs(object):
+    def __init__(self, text, as_is=False):
+        """
+
+        :param text: raw tex text
+        :param as_is: whether to leave piece as is (not translate)
+        """
+        self.text = text
+        self.as_is = as_is
+
+        print '"%s"' % text
+
+        self.decomposed = False
+        pass
+
+    def decompose(self):
+        """
+        Parse raw text, putting labels where pieces need to be processed separately. These pieces can be immutable tex
+        commands or TWS's themselves. They are replaced with stubs while translating.
+
+        :return:
+        """
+        self.decomposed = True
+        raise NotImplementedError()
+
+    def compose(self):
+        """
+        Assemble final text from text with stubs. A full dictionary of stubs should be present.
+
+        :return:
+        """
+        assert self.decomposed
+        raise NotImplementedError()
+
+    def translate(self):
+        """
+        Translate text with stubs. If a stub corresponds to TWS, it is translated recursively and the results goes
+        instead of the stub.
+
+        :return:
+        """
+        assert self.decomposed
+        raise NotImplementedError()
+
+
+def next_command(text, from_index=0):
+    assert isinstance(text, str)
+
+    m = re.match("[\$%]", text)
+    i = text.find('\\', __start=from_index)
+    j = text.find('%', __start=from_index)
+    k = text.find('$', __start=from_index)
+    index = min(x for x in [i, j, k])
+
+    # define command
+    if index == i:
+        pass
+    elif index == j:
+        pass
+    else:
+        pass
+
+
+commands = {
+    "": "",
+}
+
+
+def is_leave_as_is(special, text, index):
+    assert isinstance(special, str)
+    result = False
+    if special.startswith('%'):  # comment
+        return True
+    if special[0] == '\\' and special[1:].isalpha():  # single command, e.g. \newline, \item
+        return True
+
+
+
+class Translator(object):
+
+    def __init__(self, latex_src):
+        self.latex_src = latex_src
+        self.latex_final = ""
+
+        self.line_sep = u'\n'
+        self.par_sep = u'\n\n'
+        self.tran_sep = u'\n'  # separator between translation and original
+        self.orig_comment = u'%'
+
+    def parse(self, text):
+        """
+        Split raw tex text into pieces (TWS's) which should be translated as a whole.
+
+        :param text:
+        :return: list of TWS's with corresponding separators
+        """
+        assert isinstance(text, str)
+
+        tws_list = []
+        separator_list = []
+
+        specials_list = re.findall("\\\[\W]|\\\[a-zA-Z]+|%.+|\$[^$]+\$|\$\$[^$]+\$\$", text)
+
+        last_index = -1
+        for special in specials_list:
+            index = text.find(special, last_index+1)
+            if is_leave_as_is(special, text, index):
+                pass
+
+
+            if index > 0:
+                tws_list.append(TextWithStubs(text[last_index:index]))
+            last_index = index
+        if last_index > -1:
+            tws_list.append(TextWithStubs(text[last_index:]))
+
+
+        # TODO cut into TWS's
+        # assert len(separator_list) == len(tws_list)-1
+        return tws_list, separator_list
+
+    def translate(self, lang_from='en', lang_to='ru', leave_orig=False):
+        # TODO determine where to add orig pieces. say, where we meet \n\n. if their number is same
+        #  in final text we could insert them after the translation
+
+        # parse text into list of TWS's
+        text = self.latex_src
+        tws_list, separator_list = self.parse(text)
+
+        # translate each TWS separately
+        translated_list = []
+        for tws in tws_list:
+            tws_translated = tws.translate()
+            translated_list.append(tws_translated)
+
+        # concatenate translated pieces
+        # TODO alternate tws_list and separator_list
+        text = "".join(translated_list)
+
+        self.latex_final = text
+        return text
+
 
 def is_header(line):
     for header in ['\\part', '\\chapter', '\\section', '\\subsection', '\\subsubsection', '\\paragraph', '\\subparagraph']:
@@ -205,7 +352,7 @@ def postprocess_russian(text):
     text = text.replace(u'т. П.', u'т.\\,п.')
 
     # not in math mode: short '-' replace with long '---'
-    text = text.replace(u' - ', u'~--- ')
+    text = text.replace(u' - ', u'~--- ')  # shouldn't be used in cases like $x$-abcd
 
     return text
 
@@ -219,39 +366,47 @@ def postprocess_russian_latex(text):
     """
 
     # replace ~\cite
-    text = text.replace(' ~ \\ cite ', '~\\cite')
+    text = text.replace('\\ cite ', '\\cite')
+    text = text.replace(' ~ \\cite', '~\\cite')
 
     return text
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Latex document translation via google.translate.')
-    parser.add_argument('-i', '--input', required=True, help='input .tex file path')
-    parser.add_argument('-o', '--output', default='output.tex', help='output .tex file path')
-    parser.add_argument('--leave-original', action='store_true', help='output .tex file path')
-    # parser.add_argument('--input-lang', default='EN', help='language of input document')
-    # parser.add_argument('--output-lang', default='RU', help='language of output document')
+    # parser = argparse.ArgumentParser(description='Latex document translation via google.translate.')
+    # parser.add_argument('-i', '--input', required=True, help='input .tex file path')
+    # parser.add_argument('-o', '--output', default='output.tex', help='output .tex file path')
+    # parser.add_argument('--leave-original', action='store_true', help='output .tex file path')
+    # # TODO options: lang choice; leave_comments;
+    # # parser.add_argument('--input-lang', default='EN', help='language of input document')
+    # # parser.add_argument('--output-lang', default='RU', help='language of output document')
+    #
+    # args = parser.parse_args()
+    #
+    # # Assuming all parameters are provided and take valid values.
+    # source_path = args.input
+    # final_path = args.output
+    # leave_orig = args.leave_original
 
-    args = parser.parse_args()
+    source_path = '../data/source.txt'
+    final_path = '../data/final.txt'
+    leave_orig = True
 
-    # Assuming all parameters are provided and take valid values.
-    source_path = args.input
-    final_path = args.output
-    leave_orig = args.leave_original
-
-    # source_path = '../data/source.txt'
-    # final_path = '../data/final.txt'
-    # leave_orig = True
-
+    ###
+    # TODO
+    # * parse latex commands to exclude them from auto-translation. e.g. itemizing
+    #   \begin{..} -> special processing for environments
+    #   \textbf{}, \caption{}, \section{}, ... -> parse and translate
+    #   \ref{}, \cite{}, ... -> leave as is
+    #   \newline, ... -> leave as is
+    #
+    # * allow to specify custom translation of terms, e.g. graph model -> модель графа
+    ###
     # read source text
     with open(source_path, 'r') as f:
         source_text = f.read()
 
-    # preprocess EN latex text
-    text = preprocess_english_latex(source_text)
-
-    # translate
-    text = translate_en_ru(text, leave_orig)
+    text = Translator(source_text).translate(leave_orig=True)
 
     # save final text
     with open(final_path, 'w') as f:
@@ -260,3 +415,5 @@ def main():
 
 if __name__ == '__main__':
     main()
+    # text = "know $2+2=4$~\cite{somepaper}? % comment"
+    # print re.findall("\\\[\W]|\\\[a-zA-Z]+|%.+|\$[^$]+\$|\$\$[^$]+\$\$", text)

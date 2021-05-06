@@ -4,8 +4,8 @@ import re
 
 from enum import IntEnum
 
-from mtranslate.core import translate
-
+from TexSoup.data import BraceGroup
+from googletrans import Translator
 
 # Latex line types
 class LatexType(IntEnum):
@@ -52,11 +52,12 @@ def preprocess_english_latex(text):
             last_type = LatexType.ordinary
 
         else:
-            print 'unknown type:', line_orig
+            print ('unknown type:', line_orig)
             last_type = LatexType.other
 
         # add original line
-        content.append((last_type, unicode(line_orig, encoding='utf-8')))
+        content.append((last_type, str(line_orig)))
+        # content.append((last_type, unicode(line_orig, encoding='utf-8')))
 
     # for t, l in content:
     #     print '-------'
@@ -78,7 +79,7 @@ def cut_math(line):
 
     math_mode = False
 
-    print line
+    print (line)
     pieces = re.split(r"(\$)", line)
     for p in pieces:
         if p == '$':
@@ -128,12 +129,14 @@ def translate_en_ru(content, leave_orig):
     par_tran = []  # translated part of paragraph
     par_orig = []  # original part of paragraph
 
+    translator = Translator()
+
     def flush_par(par_tran, par_orig, do_translation):
         if do_translation:  # translate whole paragraph
             line = u' '.join(par_tran)
 
             line_wo_math, math_list = cut_math(line)
-            translated = translate(line_wo_math, "ru", "en")
+            translated = translator.translate(line_wo_math, dest="ru", src="en").text
             translated = postprocess_russian(translated)
 
             line_w_math = embed_math(translated, math_list)
@@ -205,7 +208,7 @@ def postprocess_russian(text):
     text = text.replace(u'т. П.', u'т.\\,п.')
 
     # not in math mode: short '-' replace with long '---'
-    text = text.replace(u' - ', u'~--- ')
+    text = text.replace(u' - ', u'~--- ')  # shouldn't be used in cases like $x$-abcd
 
     return text
 
@@ -219,7 +222,8 @@ def postprocess_russian_latex(text):
     """
 
     # replace ~\cite
-    text = text.replace(' ~ \\ cite ', '~\\cite')
+    text = text.replace('\\ cite ', '\\cite')
+    text = text.replace(' ~ \\cite', '~\\cite')
 
     return text
 
@@ -255,8 +259,91 @@ def main():
 
     # save final text
     with open(final_path, 'w') as f:
-        f.write(text.encode('utf-8'))
+        f.write(text)
+        # f.write(text.encode('utf-8'))
+
+
+translator = Translator(raise_exception=True)
+
+
+def translate_parts_en_ru(pieces: list):
+    # FIXME after several requests it will ban your IP, what about proxies?
+    res = []
+    print("Translating %s pieces" % len(pieces))
+    for t in pieces:
+        # r = translator.translate(t, dest='ru', src='en').text
+        r = t.upper()
+        print(r)
+        res.append(r)
+    return res
+
+
+def translate_via_texsoup():
+    from TexSoup import TexSoup, TexNode
+    from TexSoup.utils import Token
+
+    # read source text
+    # source_path = '../data/source.txt'
+    source_path = '../data/conference_101719.tex'
+    with open(source_path, 'r') as f:
+        source_text = f.read()
+
+    soup = TexSoup(source_text)
+
+    # Split into translation chunks
+    names = set()
+
+    # for elem in soup.contents:
+    #     parse_elem(elem)
+    tokens = []
+    for name in ['section', 'section*', 'subsection', 'subsection*',
+                 'caption', 'title']:
+        for s in soup.find_all(name):
+            for t in s.contents:
+                if isinstance(t, Token):
+                    tokens.append(t)
+
+    # Translate texts from the list of tokens
+    texts = [t.text for t in tokens]
+    texts = translate_parts_en_ru(texts)
+    for i, t in enumerate(tokens):
+        t.text = texts[i]
+
+    # Tokens from main content
+    def parse_elem(elem):
+        if isinstance(elem, TexNode):
+            names.add(elem.name)
+            # print('***', elem.name, elem)
+            pass
+            # for e in elem.contents:
+            #     parse_elem(e)
+        elif isinstance(elem, Token):
+            # Add to queue
+
+            print('*', elem)
+        elif isinstance(elem, str):
+            print('*', elem)
+        else:
+            print('**', type(elem), elem)
+            # raise ValueError("")
+
+
+    soup.contents[-1]
+    print(soup)
+
+    # save final text
+    final_path = '../data/final.txt'
+    with open(final_path, 'w') as f:
+        f.write(str(soup))
 
 
 if __name__ == '__main__':
-    main()
+    # main()
+    # text = "know $2+2=4$~\cite{somepaper}? % comment"
+    # print re.findall("\\\[\W]|\\\[a-zA-Z]+|%.+|\$[^$]+\$|\$\$[^$]+\$\$", text)
+
+    # t = Translator().translate('We use the following label propagation algorithm, lets name it Cordv, where X is a number of iterations.', dest='ru', src='en')
+    # print(t.text)
+
+    translate_via_texsoup()
+

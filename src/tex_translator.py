@@ -17,7 +17,8 @@ class LatexType(IntEnum):
 MATH_STUB = '***'  # used to replace math formulas before auto-translation
 TEX_STUB = 'TEX_STUB'  # used to replace short Tex commands within one piece of text
 TEX_SEP = '\nTEX_SEP\n'  # used to separate pieces of text
-TOKEN_SEP = ' TOKEN_SEP'  # used to separate consecutive tokens, FIXME: space could be removed by translator
+TOKEN_SEP = '****'  # used to separate consecutive tokens, FIXME: space could be removed by translator
+NEW_LINE = 'NEW_LINE'  # TODO assert NEW_LINE is not encountered in text
 # OPEN_QUOTE = '"'  # used to label start of modified text
 # CLOSE_QUOTE = '"'  # used to label end of modified text
 
@@ -298,9 +299,19 @@ class Chunk:
     def append_token(self, token: Token):
         # TODO which tokens we ignore?
         text = str(token.text)
-        if len(text) < 3:
-            return
-        if sum(c.isalpha() for c in text) < 3:  # FIXME this works for src=en only!
+        ignore = False
+        if len(text) == 0 and text in "[]()":
+            # Exceptions
+            ignore = False
+        else:
+            # Rules for ignorance
+            if len(text) < 3:
+                ignore = True
+            if sum(c.isalpha() for c in text) < 3:  # FIXME this works for src=en only!
+                ignore = True
+
+        # TODO do not ignore []
+        if ignore:
             return
 
         self.tokens.append(token)
@@ -316,29 +327,66 @@ class Chunk:
 
     # @logger.catch
     def translate(self):
-        # tokens list is [Token, *, Token, *, .., Token]
-        source_text = ""
+        """ Translate in-place. """
+        # Prepare tokens for translation (translator related part)
+        spaces_before = []
+        spaces_after = []
         for t in self.tokens:
             if isinstance(t, Token):
-                # TODO preprocess text \n\n -> \n etc
-                source_text += t.text
+                # 1) Handle trailing whitespaces since translator will lose them
+                start = 0
+                end = -1
+                while t.text[start].isspace():
+                    start += 1
+                while t.text[end].isspace():
+                    end -= 1
+                end += 1
+                before = t.text[:start]
+                after = t.text[end:] if end < 0 else ""
+                spaces_before.append(before)
+                spaces_after.append(after)
+                t.text = "%s%s%s" % (
+                    " " if len(before) > 0 else "",
+                    t.text[start: end or None],
+                    " " if len(after) > 0 else "")
+                if len(t.text) < 1:
+                    print("-1")
+
+                # 2) Handle newlines  # TODO do we want to revert this?
+                # '\n' -> ' '
+                # '\n\n' -> '\n'
+                t.text = t.text.replace('\n\n', NEW_LINE).replace('\n', ' ').replace(NEW_LINE, '\n')
+
+        # Text to be translated is a concatenated text of all the tokens and stubs
+        plain_text = ""
+        for t in self.tokens:
+            if isinstance(t, Token):
+                plain_text += t.text
             else:
-                source_text += t
+                plain_text += t
 
-        dest_text = translate_parts_en_ru([source_text])[0]
+        # Translate plain text
+        dest_text = translate_parts_en_ru([plain_text])[0]
 
-        # Parse text
+        # TODO process text after translator:
+        # remove whitespaces between word and * (Conference Paper Title* -> Название доклада конференции *)
+        # remove whitespaces around / (Wb/m -> Wb / m)
+        # remove extra whitespaces within various quotes (``0,25'' -> `` 0,25 '')
+        # ...
+
+        # Split translated text back into tokens
         # TODO assert tokens don't contain stubs besides we put it there
         parts = [dest_text]
         for sep in [TEX_SEP, TEX_STUB, TOKEN_SEP]:
             parts = itertools.chain.from_iterable([p.split(sep) for p in parts])
         parts = list(parts)
 
+        # We suppose tokens list was [Token, *, Token, *, .., Token]
         assert 2*len(parts)-1 == len(self.tokens)
         ix = 0
         for t in self.tokens:
             if isinstance(t, Token):
-                t.text = parts[ix]
+                t.text = spaces_before[ix] + parts[ix].strip() + spaces_after[ix]
                 ix += 1
 
 
@@ -363,6 +411,14 @@ class Chunker:
             #     chunk.append_stub(CLOSE_QUOTE)
 
             # TODO where to start a new chunk?
+
+            # TODO ignore some TexNodes:
+            # \color{...}, \begin{thebibliography}{} ...,
+            # \label{...}, \cite{...}, +
+            # \begin{...}, \end{...}, name=aligned ???
+            # \usepackage{...}
+            if elem.name in ['label', 'cite', 'color', 'thebibliography', 'ref', 'eqref']:
+                return
 
             # Start a new chunk
             new_chunk = Chunk()
@@ -392,13 +448,16 @@ class Chunker:
         """
         chunks = []
         for chunk in self.chunks:
-            # Remove redundant separators
+            # Remove redundant separators, add separators between consecutive tokens
             tokens = []
             prev_token_was_separator = False
             for t in chunk.tokens:
                 if isinstance(t, Token):
                     if not prev_token_was_separator:
                         # Consecutive tokens w/o separator
+                        print('Consecutive tokens w/o separator')
+                        print("<%s>" % (tokens[-1] if len(tokens) > 0 else ""))
+                        print("<%s>" % t)
                         tokens.append(TOKEN_SEP)
                     tokens.append(t)
                     prev_token_was_separator = False
@@ -409,6 +468,7 @@ class Chunker:
                     else:
                         tokens.append(t)
                         prev_token_was_separator = True
+
             # Eliminate first and last stubs
             if len(tokens) > 0 and not isinstance(tokens[0], Token):
                 tokens = tokens[1:]
@@ -441,20 +501,13 @@ class Chunker:
                 # Concatenate chunk
                 cur_chunk.append_stub(TEX_SEP)
                 cur_chunk.tokens.extend(chunk.tokens)
-        chunks.append(cur_chunk)
+        if cur_chunk:
+            chunks.append(cur_chunk)
 
         self.chunks = chunks
 
     def translate(self):
         """ Translate in-place. """
-        # Prepare tokens for translation
-        # Handle newlines  # FIXME it's how to revert this?
-        NEW_LINE = 'NEW_LINE'
-        for chunk in self.chunks:
-            for t in chunk.tokens:
-                if isinstance(t, Token):
-                    t.text = t.text.replace('\n\n', NEW_LINE).replace('\n', ' ').replace(NEW_LINE, '\n')
-
         for c in self.chunks:
             c.translate()
 
@@ -473,10 +526,11 @@ def translate_via_texsoup():
     # read source text
     # source_path = '../data/source.txt'
     source_path = '../data/conference_101719.tex'
+    # source_path = '../data/modularity_report.tex'
     with open(source_path, 'r') as f:
         source_text = f.read()
 
-    soup = TexSoup(source_text)
+    soup = TexSoup(source_text, tolerance=1)
 
     # # Tokens from special parts of text
     # tokens = []

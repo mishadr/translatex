@@ -1,0 +1,253 @@
+\documentclass[a4paper,twocolumn]{article}
+\usepackage[utf8]{inputenc}
+
+\title{Parallel modularity computation for directed weighted graphs \\ with overlapping communities \\ \bigskip \\ \large Technical report}
+\author{Institute for System Programming of RAS \\ RRC, Huawei Technologies}
+\date{June 2016}
+
+% With underlined and greyed (25%) links, greyscale [0.2126, 0.7152, 0.0722], and with PDF author/title metadata.
+\usepackage[
+  pdfborderstyle={/S/U/W 2},
+  linkbordercolor={0.973 0.598 0.598},
+  citebordercolor={0.598 0.973 0.598},
+  urlbordercolor={0.598 0.973 0.973},
+  pdftex,
+  pdfauthor={Mikhail Drobyshevsky}]{hyperref}
+
+\usepackage{kantlipsum,cuted}
+\usepackage{graphicx}
+\usepackage{mathtools}
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{algorithm2e}
+\usepackage{array}
+\usepackage{hyperref}
+
+\newcolumntype{C}{>{\centering\arraybackslash}p{1.9cm}}
+\usepackage[backend=biber, sorting=ynt]{biblatex}
+\addbibresource{references.bib}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+This report presents new versions of modularity measure for directed weighted graphs with overlapping communities. We consider several approaches to computing modularity and try to extend them. Taking into account computational complexity, we suggest two parallelized extensions which are scalable to large graphs (more than $10^4$ nodes). %Also we implemented a parallel implementation of computing these extensions.
+\end{abstract}
+
+\section{Introduction}
+
+The motivation of our research into modularity computation was the need to quantitatively assess and compare the quality of various clustering algorithms applied to mobile call graphs. As soon as no such graphs with ground-truth community structure were found, we couldn't use the most popular quality metric based on Normalized Mutual Information (NMI).
+
+For evaluating quality of community detection methods on graphs with unknown reference communities, metrics based on probabilistic models are used. Such metrics include modularity, surprise, significance \cite{traag2015surprise}, ER-modularity \cite{reichardt2006}. Also, generative models from model-based community detection methods can be used to estimate likelihood of clustered graph \cite{Yang2012, McDaid2010}.
+
+Modularity value characterizes the strength of a particular clustering of a graph. It is high when clusters are dense and sparsely connected to each other, whereas its value is low when clusters are formed at random. Besides evaluation of community cover, modularity is also used as optimization function in some community detection algorithms \cite{Chen2014, Dugue2015}. In \cite{Chang2011} modularity is also used for graph partitioning, but only for the case of two communities.
+
+Here we consider modularity metric, its existing extensions for directed and weighted graphs and for the case of overlapping communities. Then we describe our extensions of modularity for overlapping communities in directed weighted graphs.
+
+\section{Notation}
+
+In this report we will use the following notation.
+
+$G(V,E)$ -- graph with nodes $V$ and edges $E$, nodes $i,j,k \in V$, edge $l(i,j) \in E$;
+
+$C$ -- set of communities on graph $G$, $c \in C$ -- particular community;
+
+$C_i$ -- set of communities node $i$ belongs to;
+
+$S$ -- average community size in graph $G$;
+
+$\Sigma$ -- average square community size in graph $G$;
+
+$A$ -- adjacency matrix of graph $G$;
+
+$A_{i,j}$ -- an element of $A$;
+
+$w_{i,j}$ -- weight of edge $l(i,j)$;
+
+$k_i$ -- degree of node $i$;
+
+We will also use $V, E, C$ instead of $|V|, |E|, |C|$ to denote sizes of corresponding sets.
+
+\section{Existing versions of modularity}
+
+Modularity was defined by Newman and Girvan \cite{Newman2003} to measure a quality of a partition of a graph into a set of clusters. It is the fraction of edges within the clusters minus the expected such fraction in a randomly connected graph with the same nodes and their degrees. Modularity was originally defined for undirected unweighted graphs and is given by:
+
+\begin{equation}
+\label{modularity1}
+\begin{aligned}
+Q =\sum_{c\in C}\left [ \frac{E_c^{in}}{E}-\left ( \frac{2E_c^{in} + E_c^{out}}{2E} \right )^2 \right ],
+\end{aligned}
+\end{equation}
+where $E_c^{in}$ -- number of edges between nodes within community $c$, $E_c^{out}$ -- number of edges from the nodes in community $c$ to the nodes outside $c$.
+
+Modularity can equivalently be expressed via adjacency matrix $A_{ij}$ and nodes degrees $k_i$:
+
+\begin{equation}
+\label{modularity2}
+\begin{aligned}
+Q=\frac{1}{2E}\sum_{c\in C}\sum_{i,j\in c}\left ( A_{ij}-\frac{k_ik_j}{2E} \right )
+\end{aligned}
+\end{equation}
+
+There are three main directions of extension of the original modularity definition: for directed graphs, for weighted graphs, and for the case of overlapping communities.
+
+\subsection{Modularity for directed and weighted graphs}
+
+Extension of modularity \eqref{modularity2} to directed graphs is rather straightforward \cite{Leicht2007}:
+
+\begin{equation}
+\label{modularity_dir}
+Q=\frac{1}{E}\sum_{c\in C}\sum_{i,j\in c}\left ( A_{ij} - \frac{k_i^{out}k_j^{in}}{E} \right ),
+\end{equation}
+where $k_i^{out}$ is out-degree of node $i$ and $k_j^{in}$ is in-degree of node $j$.
+
+Modularity \eqref{modularity2} is easily generalized to weighted graphs as well \cite{Newman2004}:
+
+\begin{equation}
+\label{modularity_wei}
+Q=\frac{1}{2m}\sum_{c\in C}\sum_{i,j\in c}\left ( w_{ij} - \frac{w_iw_j}{2m} \right ),
+\end{equation}
+where $w_{ij}$ -- weight of edge $l(i,j)$, $w_i = \sum_{j}{w_{ij}}$ is sum of all weights of edges of node $i$, and $m = \frac{1}{2}\sum_{i,j}{w_{ij}}$ is total weight of all edges.
+
+Moreover, modularity formula \eqref{modularity2} for both weighted and directed graphs can be written as \cite{Arenas2007}:
+
+\begin{equation}
+\label{modularity_dir_wei}
+\begin{aligned}
+Q=\frac{1}{m}\sum_{c\in C}\sum_{i,j\in c}\left ( w_{ij}-\frac{w_i^{out}w_j^{in}}{m} \right )
+\end{aligned}
+\end{equation}
+
+Finally, modularity based on LinkRank, was suggested for weighted directed graphs \cite{Kim2009}:
+
+\begin{equation}
+\label{modularity_linkrank}
+\begin{aligned}
+& Q=\sum_{c \in C}\sum_{i,j \in c}(L_{ij}-\pi _i \pi _j)
+\\
+& L_{ij}=\pi _iG_{ij} \text{ -- LinkRank},
+\\
+& \vec \pi = (\pi_1, \dots, \pi_V) \text{ -- PageRank vector}
+\end{aligned}
+\end{equation}
+
+LinkRank is an analogy of PageRank \cite{langville2011google} for links. PageRank is the probability of a particular page (node) being visited by a random surfer and can be defined as a stationary row vector of Google Matrix $G$: $\vec \pi^T=\vec \pi^TG$. In case of directed graphs Google Matrix $G_{ij}=\alpha \frac{w_{ij}}{w_i^{out}}+\frac{1}{N} (\alpha g_i+1-\alpha)$, where $\alpha$ is damping parameter for PageRank (with probability $1-\alpha$ random surfer jumps to a random node) and $g_i$ is indicator of dangling node:\\ $g_i=\begin{cases} 1 & \text{if node is dangling } (w_i^{out}=0) \\ 0 & \text{otherwise} \end{cases}$.
+
+This formula originates from an alternative notion of community as a group of nodes where a random surfer spends more time in average. More technically, this definition of modularity is the deviation between the fraction of time a random walker spends within communities and the expected such time.
+
+
+\subsection{Overlapping modularity}
+
+In the case when a node can belong to several communities, the belonging coefficients $a_{i,c}$ are introduced \cite{Nepusz2007} which indicate how much a node $i$ belongs to community $c$. This coefficients are non-negative and sum to one: $\forall i \in V, \forall c \in C$ $a_{i,c} > 0 $, $\sum_{c \in C}{a_{i,c}}=1$. This relates to another extension of community detection problem, called fuzzy community detection \cite{gregory2011fuzzy}. To generalize different approaches of using belonging coefficients, a belonging function $f(a_{i,c_i},a_{j,c_j})$ can be defined \cite{Chen2015} to characterize an extent to what an edge $(i,j)$ connects communities $c_i$ and $c_j$ respectively.
+
+According to this, several approaches for overlapping modularity from the literature can be generalized to the following two definitions \cite{Chen2015}:
+
+\begin{equation}
+\label{modularity_overlap_1}
+\begin{aligned}
+& Q=\sum_{c\in C}\left [ \frac{E_c^{in}}{E}-\left ( \frac{2E_c^{in} + E_c^{out}}{2E} \right )^2 \right ] \\
+& E=\frac{1}{2}\sum_{i,j \in V}A_{ij} \\
+& E_c^{in}=\frac{1}{2}\sum_{i,j \in c}A_{ij}\cdot f(a_{i,c},a_{j,c}) \\
+& E_c^{out}=\sum_{i \in c}\sum_{j \in c' \neq c}A_{ij}\cdot f(a_{i,c},a_{j,c'})
+\end{aligned}
+\end{equation}
+
+and
+
+\begin{equation}
+\label{modularity_overlap_2}
+\begin{aligned}
+Q=\frac{1}{2E}\sum_{c\in C}\sum_{i,j\in c}\left ( A_{ij}-\frac{k_ik_j}{2E} \right )f(a_{i,c}, a_{j,c})
+\end{aligned}
+\end{equation}
+
+where belonging coefficient can be:
+
+\begin{equation}
+\label{equation:bc}
+\begin{array}{cc}
+a_{i,c} = \left [
+\begin{matrix}
+\dfrac{1}{C_i}
+\\
+\dfrac{\sum_{k\in c}A_{ik}}{\sum_{c'\in C_i} \sum_{k\in c'}A_{ik} }
+\\
+\dfrac{\sum_{k \in c}{\frac{M_{ik}^c}{M_{ik}}A_{ik}}}{\sum_{c \in C}{\sum_{k \in c}{\frac{M_{ik}^c}{M_{ik}}A_{ik}}}}
+\end{matrix} \right.,
+%\\
+%\begin{aligned}
+%& M_{ik} \text{is the number of maximal cliques containing edge $(i,j)$} \\
+%& M_{ik}^c \text{ -- the same inside community $c$} \\
+%\end{aligned}
+\end{array}
+\end{equation}
+where $M_{ik}$ is the number of maximal cliques containing edge $(i,j)$, $M_{ik}^c$ is the number of maximal cliques containing edge $(i,j)$ inside community $c$.
+
+Belonging function can be:
+
+\begin{equation}
+\label{bf}
+\begin{aligned}
+f(a, b)=\left [
+\begin{matrix}
+\frac{a+b}{2}
+\\ 
+ab
+\\
+max(a,b)
+\end{matrix}\right.
+\end{aligned}
+\end{equation}
+
+\subsection{Further extensions of modularity}
+
+Besides the node-based extensions, there was suggested edge-based extension \cite{Nicosia2008} (for directed graphs):
+
+\begin{strip}
+\begin{equation}
+\label{modularity_over_edge}
+\begin{gathered}
+Q=\frac{1}{E}\sum_{c\in C}\sum_{i,j\in V}\left ( \beta_{l(i,j),c}A_{ij} - \frac{\beta_{l(i,\cdot),c}^{out}k_i^{out} \beta_{l(\cdot,j),c}^{in}k_j^{in}}{E} \right )
+\\
+\begin{aligned}
+& \beta_{l(i,j),c} = f(a_{i,c},a_{j,c}) \text{ -- edge belonging coefficient,}
+\\
+& \beta_{l(i,\cdot),c}^{out} = \frac{1}{V}\sum_{k \in V}{f(a_{i,c},a_{k,c})} \text{ -- expected of that for outcoming link,}
+\\
+& \beta_{l(\cdot,j),c}^{in} = \frac{1}{V}\sum_{k \in V}{f(a_{k,c},a_{j,c})} \text{ -- expected of that for incoming link.}
+\end{aligned}
+\end{gathered}
+\end{equation}
+\end{strip}
+
+Here edge belonging function $f(a_{i,c},a_{j,c})$ can be any of \eqref{bf}, but the authors suggested this variant:
+
+\begin{equation}
+\label{bf_edge}
+\begin{gathered}
+f(a,b)=\frac{1}{(1+e^{-h(a)})(1+e^{-h(b)})},
+\\
+h(x)=2px-p, \;\; p=30.
+\end{gathered}
+\end{equation}
+
+It is worth to notice that actually in the internal sum iterating of pairs of nodes $i,j$ are done over nodes only from community $c$ (not from the whole $V$), due to the form of $\beta$ functions.
+
+Authors of \cite{Chen2015} suggested density-based version of modularity \eqref{modularity1} for overlapping directed graphs:
+
+
+
+
+
+\section{Conclusion}
+
+We investigated existing approaches to computing modularity measure and developed $Q_S$ and $Q_{LR}$ -- modularity extensions for large directed weighted graphs with overlapping communities. These extensions have low computational complexity which makes them applicable to graphs with more than $10^4$ nodes and they also can be computed in parallel way.
+
+These two formulae are based on different notions of community: as group of nodes with more dense links ($Q_S$) or a group of nodes where a random surfer tends to spend more time ($Q_{LR}$). Since a surfer walks along link direction, the second formula is more sensible to direction of links in a graph.
+
+As a future direction may be considered a possibility to use new version of modularity for overlapping community detection in directed weighted graphs.
+
+\printbibliography
+\end{document}
+

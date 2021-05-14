@@ -76,7 +76,7 @@ Modularity was defined by Newman and Girvan \cite{Newman2003} to measure a quali
 \begin{equation}
 \label{modularity1}
 \begin{aligned}
-Q =\sum_{c\in C}\left [ \frac{E_c^{in}}{E}-\left ( \frac{2E_c^{in} + E_c^{out}}{2E} \right )^2 \right ],
+Q =\sum_{c\in C} [ \frac{E_c^{in}}{E}- ( \frac{2E_c^{in} + E_c^{out}}{2E} \right )^2 \right ],
 \end{aligned}
 \end{equation}
 where $E_c^{in}$ -- number of edges between nodes within community $c$, $E_c^{out}$ -- number of edges from the nodes in community $c$ to the nodes outside $c$.
@@ -86,7 +86,7 @@ Modularity can equivalently be expressed via adjacency matrix $A_{ij}$ and nodes
 \begin{equation}
 \label{modularity2}
 \begin{aligned}
-Q=\frac{1}{2E}\sum_{c\in C}\sum_{i,j\in c}\left ( A_{ij}-\frac{k_ik_j}{2E} \right )
+Q=\frac{1}{2E}\sum_{c\in C}\sum_{i,j\in c} ( A_{ij}-\frac{k_ik_j}{2E} \right )
 \end{aligned}
 \end{equation}
 
@@ -98,7 +98,7 @@ Extension of modularity \eqref{modularity2} to directed graphs is rather straigh
 
 \begin{equation}
 \label{modularity_dir}
-Q=\frac{1}{E}\sum_{c\in C}\sum_{i,j\in c}\left ( A_{ij} - \frac{k_i^{out}k_j^{in}}{E} \right ),
+Q=\frac{1}{E}\sum_{c\in C}\sum_{i,j\in c} ( A_{ij} - \frac{k_i^{out}k_j^{in}}{E} \right ),
 \end{equation}
 where $k_i^{out}$ is out-degree of node $i$ and $k_j^{in}$ is in-degree of node $j$.
 
@@ -106,7 +106,7 @@ Modularity \eqref{modularity2} is easily generalized to weighted graphs as well 
 
 \begin{equation}
 \label{modularity_wei}
-Q=\frac{1}{2m}\sum_{c\in C}\sum_{i,j\in c}\left ( w_{ij} - \frac{w_iw_j}{2m} \right ),
+Q=\frac{1}{2m}\sum_{c\in C}\sum_{i,j\in c} ( w_{ij} - \frac{w_iw_j}{2m} \right ),
 \end{equation}
 where $w_{ij}$ -- weight of edge $l(i,j)$, $w_i = \sum_{j}{w_{ij}}$ is sum of all weights of edges of node $i$, and $m = \frac{1}{2}\sum_{i,j}{w_{ij}}$ is total weight of all edges.
 
@@ -115,7 +115,7 @@ Moreover, modularity formula \eqref{modularity2} for both weighted and directed 
 \begin{equation}
 \label{modularity_dir_wei}
 \begin{aligned}
-Q=\frac{1}{m}\sum_{c\in C}\sum_{i,j\in c}\left ( w_{ij}-\frac{w_i^{out}w_j^{in}}{m} \right )
+Q=\frac{1}{m}\sum_{c\in C}\sum_{i,j\in c} ( w_{ij}-\frac{w_i^{out}w_j^{in}}{m} \right )
 \end{aligned}
 \end{equation}
 
@@ -146,7 +146,7 @@ According to this, several approaches for overlapping modularity from the litera
 \begin{equation}
 \label{modularity_overlap_1}
 \begin{aligned}
-& Q=\sum_{c\in C}\left [ \frac{E_c^{in}}{E}-\left ( \frac{2E_c^{in} + E_c^{out}}{2E} \right )^2 \right ] \\
+& Q=\sum_{c\in C} [ \frac{E_c^{in}}{E}- ( \frac{2E_c^{in} + E_c^{out}}{2E} \right )^2 \right ] \\
 & E=\frac{1}{2}\sum_{i,j \in V}A_{ij} \\
 & E_c^{in}=\frac{1}{2}\sum_{i,j \in c}A_{ij}\cdot f(a_{i,c},a_{j,c}) \\
 & E_c^{out}=\sum_{i \in c}\sum_{j \in c' \neq c}A_{ij}\cdot f(a_{i,c},a_{j,c'})
@@ -158,7 +158,7 @@ and
 \begin{equation}
 \label{modularity_overlap_2}
 \begin{aligned}
-Q=\frac{1}{2E}\sum_{c\in C}\sum_{i,j\in c}\left ( A_{ij}-\frac{k_ik_j}{2E} \right )f(a_{i,c}, a_{j,c})
+Q=\frac{1}{2E}\sum_{c\in C}\sum_{i,j\in c} ( A_{ij}-\frac{k_ik_j}{2E} \right )f(a_{i,c}, a_{j,c})
 \end{aligned}
 \end{equation}
 
@@ -167,7 +167,7 @@ where belonging coefficient can be:
 \begin{equation}
 \label{equation:bc}
 \begin{array}{cc}
-a_{i,c} = \left [
+a_{i,c} =  [
 \begin{matrix}
 \dfrac{1}{C_i}
 \\
@@ -189,7 +189,7 @@ Belonging function can be:
 \begin{equation}
 \label{bf}
 \begin{aligned}
-f(a, b)=\left [
+f(a, b)= [
 \begin{matrix}
 \frac{a+b}{2}
 \\ 
@@ -208,7 +208,7 @@ Besides the node-based extensions, there was suggested edge-based extension \cit
 \begin{equation}
 \label{modularity_over_edge}
 \begin{gathered}
-Q=\frac{1}{E}\sum_{c\in C}\sum_{i,j\in V}\left ( \beta_{l(i,j),c}A_{ij} - \frac{\beta_{l(i,\cdot),c}^{out}k_i^{out} \beta_{l(\cdot,j),c}^{in}k_j^{in}}{E} \right )
+Q=\frac{1}{E}\sum_{c\in C}\sum_{i,j\in V} ( \beta_{l(i,j),c}A_{ij} - \frac{\beta_{l(i,\cdot),c}^{out}k_i^{out} \beta_{l(\cdot,j),c}^{in}k_j^{in}}{E} \right )
 \\
 \begin{aligned}
 & \beta_{l(i,j),c} = f(a_{i,c},a_{j,c}) \text{ -- edge belonging coefficient,}
@@ -236,9 +236,284 @@ It is worth to notice that actually in the internal sum iterating of pairs of no
 
 Authors of \cite{Chen2015} suggested density-based version of modularity \eqref{modularity1} for overlapping directed graphs:
 
+\begin{strip}
+\begin{equation}
+\label{modularity_over_density}
+\begin{gathered}
+Q_D=\sum_{c\in C} [ \frac{E_c^{in}}{E}\cdot d_c- ( \frac{2E_c^{in} + E_c^{out}}{2E}\cdot d_c \right )^2 -\sum_{c'\neq c}\frac{E_{c,c'}}{2E}d_{c,c'} \right ]
+\\
+\begin{aligned}
+& d_c=\frac{2E_c^{in}}{\sum_{i \neq j \in c}f(a_{i,c},a_{j,c})} \text{ -- internal density} 
+\\
+& d_{c,c'}=\frac{E_{c,c'}}{\sum_{i \in c, j \in c'}f(a_{i,c},a_{j,c'})} \text{ -- pair-wise density}
+\\
+& E_{c,c'}=\sum_{i \in c, j \in c'}{A_{ij} \cdot f(a_{i,c},a_{j,c'})}
+\end{aligned}
+\end{gathered}
+\end{equation}
+\end{strip}
+
+\subsection{Drawbacks and limitations}
+
+The first obvious drawback is that there was not found any modularity formula, comprising all three needed properties: support of directed, weighted graphs with overlapping communities.
+
+The second limitation is computational complexity. Aforementioned formulas of overlapping modularity are not acceptable for large graphs (with more than $10^4$ nodes within community cover) due to their high computational complexity. Denoting the average number of communities by $C$, average community size by $S$ and number of nodes by $V$, we have for \eqref{modularity_over_density} time complexity $O(C^2 \Sigma)$, and for \eqref{modularity_over_edge} --- $O(C V^2 \Sigma)$. See subsection \ref{sec:complexity} for more details.
+
+It's also worth noting that LinkRank authors~\cite{Kim2009} provide some evidence that the modularity~\eqref{modularity_dir_wei} can't distinguish the direction of links.
+
+\section{Our extensions of modularity}
+
+Since we focus on modularity for directed weighted graphs with overlapping communities, we actually have two possibilities of extension: make overlapping (directed) modularities support weights, or to extend directed weighted modularities to the overlapping case.
+
+The first approach suggests naive substitution of adjacency matrix of a graph to matrix of weights and number of edges to the sum of their weights. Doing so with density formula \eqref{modularity_over_density} leads to unnormalization: values of modularity start to exceed the available range $(-\frac{1}{2};1]$. But we will still use it in experiments with unweighted graphs. On the other hand, edge-based formula seems to allow such generalization, becoming:
+
+\begin{strip}
+\begin{equation}
+\label{modularity_over_edge_ext}
+Q_E=\frac{1}{m}\sum_{c\in C}\sum_{i,j\in V} ( \beta_{l(i,j),c}w_{ij} - \frac{\beta_{l(i,\cdot),c}^{out}w_i^{out} \beta_{l(\cdot,j),c}^{in}w_j^{in}}{m} \right )
+\end{equation}
+\end{strip}
+But this is still computationally expensive.
+
+The second approach consists in introducing belonging coefficients \eqref{equation:bc} and belonging functions \eqref{bf} to simple version \eqref{modularity_dir_wei}:
+
+\begin{equation}
+\label{modularity_dir_wei_ext}
+Q_S=\frac{1}{m}\sum_{c\in C}\sum_{i,j\in c} ( w_{ij}-\frac{w_i^{out}w_j^{in}}{m} \right )f(a_{i,c}, a_{j,c}),
+\end{equation}
+and to LinkRank-based version of modularity \eqref{modularity_linkrank}:
+\begin{equation}
+\label{modularity_linkrank_ext}
+Q_{LR}=\sum_{c \in C}\sum_{i,j \in c}(L_{ij}-\pi _i \pi _j)f(a_{i,c}, a_{j,c}).
+\end{equation}
+
+Since PageRank (and hence LinkRank) has fast implementations (\cite{page1999pagerank, langville2005survey}), these two formulas have much lower computational complexities.
+
+Also, we suggested to use in formulas a normalization coefficient instead of belonging function:
+
+\begin{equation}
+\label{bf_ext}
+f(a_{i,c}, a_{j,c}) \mapsto \frac{1}{|C_i \cap C_j|}
+\end{equation}
+
+The intuition is the following. If both nodes $i,j$ belong to $n$ communities, the term $\sum_{i,j \in c}{(...)}$ will encounter $n$ times in modularity formula, once for each community, so we weigh it by the factor of $\frac{1}{n}=\frac{1}{|C_i \cap C_j|}$. It's easy to see that otherwise modularity can become unlimited: suppose that each community is actually two equal different communities, then modularity value doubles.
+
+\subsection{Computational complexity}
+\label{sec:complexity}
+
+Here we calculate computational complexities of modularity extensions $Q_D$, $Q_E$, $Q_S$ and $Q_{LR}$. All complexities are present in table \ref{table_compl}.
+
+Firstly, denote by $O(F)$ computational complexity of $f(a_{i,c},a_{j,c})$ -- we consider it later.
+
+In $Q_D$ \eqref{modularity_over_density}, $E_c^{in}$ is computed in $O(S^2 F)$, so as $d_c$; $E_c^{out}$ in $O(C \Sigma F)$; $E_{c,c'}$ and $d_{c,c'}$ in $O(S^2 F)$ time. Counting that average square community size $\Sigma$ is not less than square of average size $S^2$, each term of summation has complexity $O(C \Sigma F)$, giving overall complexity $O(C^2 \Sigma F)$.
+
+In $Q_E$ \eqref{modularity_over_density}, the hardest term is $\beta^{in}$ and $\beta^{out}$, which take $O(VF)$ steps, thus resulting in $O(C V^2 F^2)$ overall complexity.
+
+$Q_S$ \eqref{modularity_dir_wei_ext} and $Q_{LR}$ \eqref{modularity_linkrank_ext} have complexity $O(C \Sigma F)$, ignoring PageRank calculation time as insignificant. Understanding the big-O complexity of PageRank calculation requires analyzing the code of \texttt{pagerank\_scipy} method from NetworkX\footnote{\url{http://networkx.github.io/}}. However, Aric Hagberg (NetworkX Lead Programmer) wrote that their implementation has "linear complexity in the number of edges". In practice, PageRank computation time is negligible.
+
+Now consider $f(a_{i,c},a_{j,c})$. Uniform belonging coefficient $a_{i,c}=\frac{1}{C_i}$ may be computed by one operation if communities for each node are explicitly known, e.g. each node has a set of labels. But usually community detection algorithms return list of communities represented by sets of nodes. This means we need $O(C \log{S})$ operations to find all communities a given node $i$ belongs to. The same concerns fraction belonging coefficient, for which we have $O(S+C \log{S})$, supposing that average node membership is not very high, i.e. $C_i = O(1)$. Therefore, intersection belonging function together with the others are $O(1)$.
+
+\begin{table}[h!]
+\centering
+\caption{\label{table_compl}Computational complexities for modularity formulas, belonging functions and belonging coefficients.}
+\begin{tabular}{lc}
+\textbf{formula} & \textbf{complexity} \\
+\hline
+$Q_D$ & $O(C^2 \Sigma)$ \\
+$Q_E$ & $O(C V^2 \Sigma)$ \\
+$Q_S$ & $O(C \Sigma)$ \\
+$Q_{LR}$ & $O(C \Sigma)$ \\
+\hline
+\textbf{belonging function} \\
+\hline
+sum & $O(1)$ \\
+product & $O(1)$ \\
+intersection & $O(1)$ \\
+edge-based & $O(1)$ \\
+\hline
+\textbf{belonging coefficient} \\
+\hline
+uniform & $O(C \log{S})$ \\
+fraction & $O(S+C \log{S})$ \\
+%\hline
+\end{tabular}
+\end{table}
 
 
+\section{Experiments}
 
+We implemented in Python four versions of modularity $Q_D$, $Q_E$, $Q_S$ and $Q_{LR}$ together with 4 belonging functions:
+\begin{enumerate}\item sum $f(a,b)=\frac{1}{2}(a+b)$,
+\item product $f(a,b)=ab$,
+\item intersection $f(a,b)=\dfrac{1}{|C_i \cup C_j|}$,
+\item edge-based $f(a,b)=(1+e^{-60a+30})^{-1}(1+e^{-60b+30})^{-1}$,
+\end{enumerate}
+and two belonging coefficients:
+\begin{enumerate}
+\item uniform $a_{i,c}=\dfrac{1}{C_i}$,
+\item fraction $a_{i,c}=\dfrac{\sum_{k\in c}A_{ik}}{\sum_{c'\in C_i} \sum_{k\in c'}A_{ik} }$.
+\end{enumerate}
+Also we conducted a set of experiments: on computation time, different belonging functions and belonging coefficients, and parallelizing.
+
+\subsection{Computation time}
+
+We compared modularity value and computation time of four appropriate formulas ($Q_D$, $Q_E$, $Q_S$, $Q_{LR}$) on two graphs of different size. Since $Q_D$ doesn't support weights and fraction belonging coefficient is undefined for directed graphs (due to possible zero in denominator), graphs were chosen undirected unweighted. Experiments with directed weighted graphs are to be conducted later. We took default belonging functions (suggested in original papers) and uniform belonging coefficient for simplicity.
+
+The \texttt{small} graph was generated by CDR-GEN generator\footnote{\url{https://github.com/mayconbordin/cdr-gen}} and clustered by SLPA algorithm\footnote{\url{https://sites.google.com/site/communitydetectionslpa/}} with threshold $p=0.10$. Parameters of the smaller graph are: number of nodes $|V|=3124$, number of edges $|E|=3913$, number of communities $|C|=333$, average size of community $S=10.1$ with 100\% of nodes involved in communities, average membership $1.14$.
+
+The \texttt{big} graph was Wu et al dataset\footnote{\url{http://www.pnas.org/content/107/44/18803?tab=ds}} clustered by MOSES algorithm\footnote{\url{https://sites.google.com/site/aaronmcdaid/moses}} with 7\% of nodes involved in communities ($|V| = 72111$, $|E| = 79003$, $|C|=899$, $S=5.2$). Results are in table \ref{table_time}.
+
+\begin{table*}[h!]
+\centering
+\caption{\label{table_time}Modularity value and computation time for $Q_S$, $Q_{LR}$, $Q_D$ and $Q_E$ on 2 undirected unweighted graphs.}
+\begin{tabular}{|l|c|c|c|c|c|}
+\hline
+\textbf{formula} & \textbf{bel.func.} & \textbf{bel.coef.} & \textbf{complexity} & \textbf{Time \texttt{small}} & \textbf{Time \texttt{big}} \\
+\hline
+$Q_D$ & product & uniform & $O(C^3 \Sigma \log S)$ & 3m57s & 3h12m \\
+\hline
+$Q_E$ & edge-based & uniform & $O(C^2 V^2 \Sigma \log S)$ & 7m17s & 53h53m \\
+\hline
+$Q_S$ & intersection & uniform & $O(C^2 \Sigma \log S)$ & 0.6s & 18s \\
+\hline
+$Q_{LR}$ & intersection & uniform & $O(C^2 \Sigma \log S)$ & 0.7s & 18s \\
+\hline
+\end{tabular}
+\end{table*}
+
+\begin{table*}[h]
+\centering
+\caption{\label{table_bfbc}Comparison of different belonging functions and belonging coefficients for $Q_D$, $Q_E$, $Q_S$ and $Q_{LR}$ on undirected unweighted graph with $|V|=72146$, $|E|=79003$, $|C|=1894$, $S=5.30$ (clustered by Clique Percolation).}
+\begin{tabular}{|l|c|c|c|c|c|}
+\hline
+\textbf{formula} & \textbf{bel.coef.} & \textbf{sum} & \textbf{product} & \textbf{intersection} & \textbf{edge-based} \\
+\hline
+$Q_D$ & uniform & 0.292 (2481 s) & 0.291 (2425 s) & undefined & 0.291 (2266 s) \\
+\hline
+$Q_D$ & fraction & 0.292 (2355 s) & 0.292 (2187 s) & undefined & 0.293 (2752 s) \\
+\hline
+\hline
+$Q_E$ & uniform & 0.737 (4688 s) & 0.714 (3201 s) & 0.763 (1488 s) & 0.713 (3349 s) \\
+\hline
+$Q_E$ & fraction & 0.740 (4130 s) & 0.718 (4795 s) & 0.763 (1476 s) & 0.719 (3683 s) \\
+\hline
+\hline
+$Q_S$ & uniform & 0.737 (4 s) & 0.714 (3 s) & 0.760 (1 s) & 0.713 (2 s) \\
+\hline
+$Q_S$ & fraction & 0.738 (3 s) & 0.715 (3 s) & 0.760 (1 s) & 0.717 (3 s) \\
+\hline
+\hline
+$Q_{LR}$ & uniform & 0.647 (4 s) & 0.628 (4 s) & 0.665 (2 s) & 0.628 (4 s) \\
+\hline
+$Q_{LR}$ & fraction & 0.647 (5 s) & 0.630 (5 s) & 0.665 (2 s) & 0.631 (8 s) \\
+\hline
+\end{tabular}
+\end{table*}
+
+\begin{table*}[h!]
+\centering
+\caption{\label{table_bf}Comparison of different belonging functions for $Q_S$ and $Q_{LR}$ on a directed weighted graph with overlapping communities ($|V|=72146$, $|E|=79003$, $|C|=1894$, $S=5.30$, clustered by Clique Percolation).}
+\begin{tabular}{|l|c|c|c|c|}
+\hline
+\textbf{formula} & \textbf{sum} & \textbf{product} & \textbf{intersection} & \textbf{edge-based} \\
+\hline
+$Q_S$ & 0.258 (72 s) & 0.239 (69 s) & 0.280 (40 s) & 0.236 (72 s) \\
+\hline
+$Q_{LR}$ & 0.107 (70 s) & 0.101 (71 s) & 0.115 (37 s) & 0.099 (73 s) \\
+\hline
+\end{tabular}
+\end{table*}
+
+\begin{table*}[h]
+\centering
+\caption{\label{table_paral}Comparison of times of sequential and parallel versions ($N=6$ processes) of $Q_S$ and $Q_{LR}$ on a directed unweighted graph with $|V|=72146$, $|E|=79003$ clustered by Clique Percolation (covers 13\% of nodes) and SLPA (covers 78\% of nodes) algorithms.}
+\begin{tabular}{|l|C|C|C|C|C|C|}
+\hline
+& \multicolumn{3}{|c|}{$\mathbf{|C|=1894}$, $\mathbf{S=5.30}$ (Clique Percolation)} & \multicolumn{3}{|c|}{$\mathbf{|C|=6731}$, $\mathbf{S=9.05}$ (SLPA)} \\
+\hline
+\textbf{formula} & \textbf{sequential} & \textbf{parallel 1} & \textbf{parallel 2} & \textbf{sequential} & \textbf{parallel 1} & \textbf{parallel 2} \\
+\hline
+$Q_S$ & 104s & 37s & 38s & 106m & 36m & 32m \\
+\hline
+$Q_{LR}$ & 105s & 39s & 40s & 103m & 37m & 32m \\
+\hline
+\end{tabular}
+\end{table*}
+
+Table \ref{table_time} shows that as size of graph and size and number of communities grow, $Q_D$ and $Q_E$ become too computationally expensive, so there are only two scalable candidates, $Q_S$ and $Q_{LR}$.
+
+\subsection{Belonging functions and belonging coefficients}
+
+Then we investigated influence of different belonging functions and belonging coefficients on values of $Q_S$ and $Q_{LR}$. We used the same Wu et al dataset clustered by Clique Percolation algorithm\footnote{\url{http://www.cfinder.org/}} with 13\% of nodes involved in communities ($|V|=72146$, $|E|=79003$, $|C|=1894$, $S=5.30$).
+
+Table \ref{table_bfbc} shows that the choice of belonging function or belonging coefficient doesn't make much difference to result modularity. Meanwhile, intersection belonging function takes the lowest time. Values of $Q_S$ are in good consistency with those of $Q_E$, which is widely used in papers. $Q_{LR}$ values tend to be less than $Q_S$ and $Q_E$. $Q_D$ values differ a lot, possibly due to dissimilar formula structure, but as far as we know this formula was not compared to other ones in literature.
+
+Table \ref{table_bf} extends the comparison of different belonging functions for $Q_S$ and $Q_{LR}$ on a directed weighted graph with overlapping communities. Belonging coefficient is uniform. We see that the behavior is consistent with that of undirected unweighted case.
+
+
+\subsection{Parallel modularity}
+
+Computation process of $Q_S$ and $Q_{LR}$ naturally allows parallelization. Since each community and each node pair contributes independently to the modularity value, iterating over node pairs may be distributed between processors.
+
+We implemented two parallel versions. The first one is rather straightforward. Iteration over communities is left sequential. Each time when community of size more than $c_0=100$ is encountered, $N=6$ parallel processes are initialized. The set of all nodes pairs within the community is split into $N$ equal chunks and are assigned to these processes (see algorithm \ref{algorithm_paral_1}). 
+
+\begin{algorithm}[h!]
+\caption{Parallel modularity version 1.}
+\label{algorithm_paral_1}
+
+\For{$c \in C$}{
+	\If{$|c|>c_0$}{
+		$ \lbrace c_1,\dots, c_N \rbrace arrow$ split $c$ into $N$ equal chunks
+		\BlankLine
+		\textbf{do in parallel} $i \in \overline{1,N}$:
+		computeModularity($c_i$)
+	}
+}
+\BlankLine
+
+\end{algorithm}
+
+The second parallel version is a little more complicated. The idea is to split the set of communities $C$ into subsets between processors. But in order to balance the load, these chunks should have approximately equal sum of squares of community size since community of size $s$ has $s^2$ ordered node pairs (counting self-loops). To achieve this we used a greedy algorithm, which iterates over communities in descending order and assigns each of them to a subset that has the smallest sum of size squares. The only problem here is that the biggest community may have size square much more than sum of size squares of the rest ones, i.e. the chunk which gets this community will be overloaded. To overcome this challenge we sort communities by their sizes in descending order and apply the first parallel approach to first (biggest) several communities, until we encounter community with small enough size to allow balancing of the rest ones or reach lower community size bound $c_0$. The rest ones are split into subsets according to the mentioned greedy algorithm. To determine whether to start balancing we use a simple condition: square of size of current biggest community should be at most $\frac{1}{N}$ of total sum of squares of sizes of communities left at the moment. Formally, having sorted sizes of communities $s_1 \geqslant s_2 \geqslant ... \geqslant s_{C}$, the condition of stopping at community $k$ is $s_k^2 \leqslant \frac{1}{N} (s_k^2 + ... + s_C^2)$. See algorithm \ref{algorithm_paral_2}.
+
+\begin{algorithm}[h!]
+\caption{Parallel modularity version 2.}
+\label{algorithm_paral_2}
+
+sortBySizeInDescendingOrder($C$)
+\BlankLine
+\For{$c_i \in C$}{
+    \If{$|c_k| \leqslant c_0$ or $|c_k|^2 \leqslant \frac{1}{N} (|c_k|^2 + ... + |c_{|C|}|^2)$}{\textbf{break}}
+	\BlankLine
+	$C arrow C \setminus \{c_k\}$
+	\BlankLine
+	$ \{ c_1,\dots, c_N \} arrow$ split $c$ into $N$ equal chunks
+	\BlankLine
+	\textbf{do in parallel} $i \in \overline{1,N}$:
+	computeModularity($c_i$)
+}
+\BlankLine
+$\{ C_1, ... , C_N \} arrow$ balanceSumOfSquares(C)
+\BlankLine
+\textbf{do in parallel} $i \in \overline{1,N}$:
+{
+    \For{$c_{ik} \in C_i$}{
+        computeModularity($c_{ik}$)
+    }
+}
+\BlankLine
+
+\end{algorithm}
+
+We compared the speedup due to both versions of parallellization versus sequential computing of modularity for $Q_S$ and $Q_{LR}$. See table \ref{table_paral}. When number of communities is small ($|C|=1894$) the first method is slightly faster due to its simplicity (results were averaged over 5 runs). In case of many communities the second version shows its benefit.
+
+We also investigated process scalability of both parallel implementations. The results are represented in figure \ref{figure_paral_scal}.
+
+\begin{figure}[h!]
+\caption{Speedup of both parallel modularity versions on a directed unweighted graph with $|V|=72146$, $|E|=79003$, $|C|=1894$, $S=5.30$}
+\label{figure_paral_scal}
+\includegraphics[scale=0.5]{pics/scalab_1.png}
+\includegraphics[scale=0.5]{pics/scalab_2.png}
+\end{figure}
 
 \section{Conclusion}
 

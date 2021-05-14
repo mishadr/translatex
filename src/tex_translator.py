@@ -1,35 +1,24 @@
 # coding=utf-8
 import argparse
 import itertools
-import re
-
-from enum import IntEnum
 
 from TexSoup.data import BraceGroup
+from TexSoup import TexSoup, TexNode
+from TexSoup.reader import SIGNATURES
+from TexSoup.utils import Token
 from googletrans import Translator
 
 
-# Latex line types
-class LatexType(IntEnum):
-    ordinary, newpar, comment, header, special, other = range(6)
+SRC_LANG = 'en'
+DST_LANG = 'ru'
+MAX_LENGTH_TEXT_TRANSLATE = 2000  # limit for google translate at once
 
-
-MATH_STUB = '***'  # used to replace math formulas before auto-translation
+MATH_STUB = 'MATH_STUB'  # used to replace math formulas before auto-translation
 TEX_STUB = 'TEX_STUB'  # used to replace short Tex commands within one piece of text
 TEX_SEP = '\nTEX_SEP\n'  # used to separate pieces of text
-TOKEN_SEP = '****'  # used to separate consecutive tokens, FIXME: space could be removed by translator
+TOKEN_SEP = 'TOKEN_SEP'  # used to separate consecutive tokens
 NEW_LINE = 'NEW_LINE'  # TODO assert NEW_LINE is not encountered in text
-# OPEN_QUOTE = '"'  # used to label start of modified text
-# CLOSE_QUOTE = '"'  # used to label end of modified text
 
-
-# def is_header(line):
-#     for header in ['\\part', '\\chapter', '\\section', '\\subsection', '\\subsubsection', '\\paragraph', '\\subparagraph']:
-#         if line.startswith(header):
-#             return True
-#     return False
-#
-#
 # def preprocess_english_latex(text):
 #     """
 #     Split into lines and mark each line with a latex type.
@@ -73,134 +62,6 @@ NEW_LINE = 'NEW_LINE'  # TODO assert NEW_LINE is not encountered in text
 #     return content
 #
 #
-# def cut_math(line):
-#     """
-#     Replaces all math formulas $...$ and \[ ... \] with math_stubs.
-#
-#     :param line:
-#     :param math_stub:
-#     :return:
-#     """
-#     # TODO add \[ ... \] support
-#     math_list = []
-#     result = ""
-#
-#     math_mode = False
-#
-#     print (line)
-#     pieces = re.split(r"(\$)", line)
-#     for p in pieces:
-#         if p == '$':
-#             math_mode = not math_mode
-#             continue
-#
-#         if math_mode:
-#             math_list.append("$%s$" % p)
-#             result += MATH_STUB
-#         else:
-#             result += p
-#
-#     # print result
-#     # print math_list
-#     return result, math_list
-#
-#
-# def embed_math(text, math_list):
-#     """
-#
-#     :param text:
-#     :param math_list:
-#     :return:
-#     """
-#     # FIXME what if len(math_list) != number of stubs?
-#     for math in math_list:
-#         text = text.replace(MATH_STUB, math, 1)
-#
-#     # print text
-#     return text
-#
-#
-# def translate_en_ru(content, leave_orig):
-#     """
-#     Translate text by paragraphs, leaving original parts commented if specified.
-#
-#     :param content: list of pairs (LatexType, string)
-#     :param leave_orig: whether to leave original parts of text (will be commented)
-#     :return:
-#     """
-#     result = []
-#     line_sep = u'\n'
-#     par_sep = u'\n\n'
-#     tran_sep = u'\n'  # separator between translation and original
-#     orig_comment = u'%'
-#
-#     par_tran = []  # translated part of paragraph
-#     par_orig = []  # original part of paragraph
-#
-#     translator = Translator()
-#
-#     def flush_par(par_tran, par_orig, do_translation):
-#         if do_translation:  # translate whole paragraph
-#             line = u' '.join(par_tran)
-#
-#             line_wo_math, math_list = cut_math(line)
-#             translated = translator.translate(line_wo_math, dest="ru", src="en").text
-#             translated = postprocess_russian(translated)
-#
-#             line_w_math = embed_math(translated, math_list)
-#
-#             par = postprocess_russian_latex(line_w_math)
-#         else:
-#             par = line_sep.join(par_tran)
-#
-#         if leave_orig:
-#             par += tran_sep + line_sep.join(par_orig)
-#         result.append(par)
-#
-#     for t, line_orig in content:
-#         if t is LatexType.newpar:  # flush current paragraph
-#             # TODO do not flush if last type was newpar
-#             if len(par_orig) > 0:
-#                 flush_par(par_tran, par_orig, True)
-#                 par_tran = []
-#                 par_orig = []
-#
-#         elif t is LatexType.comment:  # Comments are ignored for translation
-#             par_orig.append(orig_comment + line_orig)
-#
-#         elif t is LatexType.ordinary:  # Ordinary line we translate as is
-#             par_tran.append(line_orig.strip())
-#             par_orig.append(orig_comment + line_orig)
-#
-#         elif t is LatexType.header:  # Try to parse and translate header
-#             # TODO Try to parse and translate header
-#             # Leave as is
-#             line_tran = line_orig
-#             par_tran.append(line_tran)
-#             par_orig.append(orig_comment + line_orig)
-#             flush_par(par_tran, par_orig, False)
-#             par_tran = []
-#             par_orig = []
-#
-#         elif t is LatexType.special:  # Leave as is
-#             # TODO what if math with slash: \[
-#             line_tran = line_orig
-#             par_tran.append(line_tran)
-#             par_orig.append(orig_comment + line_orig)
-#
-#         elif t is LatexType.other:  # Leave as is
-#             line_tran = line_orig
-#             par_tran.append(line_tran)
-#             par_orig.append(orig_comment + line_orig)
-#
-#     flush_par(par_tran, par_orig, True)
-#
-#     # for line in result:
-#     #     print '----new paragraph----'
-#     #     print line
-#     return par_sep.join(result)
-#
-#
 # def postprocess_russian(text):
 #     """
 #     Process russian text disregarding latex constructions
@@ -234,62 +95,21 @@ NEW_LINE = 'NEW_LINE'  # TODO assert NEW_LINE is not encountered in text
 #     text = text.replace(' ~ \\cite', '~\\cite')
 #
 #     return text
-#
-#
-# def main():
-#     parser = argparse.ArgumentParser(description='Latex document translation via google.translate.')
-#     parser.add_argument('-i', '--input', required=True, help='input .tex file path')
-#     parser.add_argument('-o', '--output', default='output.tex', help='output .tex file path')
-#     parser.add_argument('--leave-original', action='store_true', help='output .tex file path')
-#     # parser.add_argument('--input-lang', default='EN', help='language of input document')
-#     # parser.add_argument('--output-lang', default='RU', help='language of output document')
-#
-#     args = parser.parse_args()
-#
-#     # Assuming all parameters are provided and take valid values.
-#     source_path = args.input
-#     final_path = args.output
-#     leave_orig = args.leave_original
-#
-#     # source_path = '../data/source.txt'
-#     # final_path = '../data/final.txt'
-#     # leave_orig = True
-#
-#     # read source text
-#     with open(source_path, 'r') as f:
-#         source_text = f.read()
-#
-#     # preprocess EN latex text
-#     text = preprocess_english_latex(source_text)
-#
-#     # translate
-#     text = translate_en_ru(text, leave_orig)
-#
-#     # save final text
-#     with open(final_path, 'w') as f:
-#         f.write(text)
-#         # f.write(text.encode('utf-8'))
 
 
 translator = Translator(raise_exception=True)
 
 
-def translate_parts_en_ru(pieces: list):
+def google_translate_text(text: str, src_lang=SRC_LANG, dst_lang=DST_LANG) -> str:
+    if len(text) > MAX_LENGTH_TEXT_TRANSLATE:
+        raise RuntimeError("Text is too long (%s) for google translate (must be < %s): %s" % (
+            len(text), MAX_LENGTH_TEXT_TRANSLATE, text))
     # FIXME after several requests it will ban your IP, what about proxies?
-    # TODO unite several pieces in one request separated with \n\n
-    res = []
-    print("Translating %s pieces" % len(pieces))
-    for t in pieces:
-        r = translator.translate(t, dest='ru', src='en').text
-        # r = t.upper()
-        print(r)
-        res.append(r)
+    print("Translating text of length %s" % len(text))
+    res = translator.translate(text, dest=dst_lang, src=src_lang).text
+    # res = t.upper()
+    print(res)
     return res
-
-
-from TexSoup import TexSoup, TexNode
-from TexSoup.utils import Token
-# from loguru import logger
 
 
 class Chunk:
@@ -310,7 +130,7 @@ class Chunk:
             if sum(c.isalpha() for c in text) < 3:  # FIXME this works for src=en only!
                 ignore = True
 
-        # TODO do not ignore []
+        # TODO do not ignore: []
         if ignore:
             return
 
@@ -366,7 +186,7 @@ class Chunk:
                 plain_text += t
 
         # Translate plain text
-        dest_text = translate_parts_en_ru([plain_text])[0]
+        dest_text = google_translate_text(plain_text)
 
         # TODO process text after translator:
         # remove whitespaces between word and * (Conference Paper Title* -> Название доклада конференции *)
@@ -398,26 +218,19 @@ class Chunker:
         if chunk is None:
             chunk = self.chunks[-1]
         if isinstance(elem, TexNode):
-            # names.add(elem.name)
-
-            # embed: $..$, \textit{..}, etc
-            # if text modifier - add to current chunk with quotes
-            # if elem.name in ['textit']:
-            #     # TODO add all modifiers, custom ones?
-            #     chunk.append_stub(OPEN_QUOTE)
-            #     # TODO what if several embedded modifiers?
-            #     for e in elem.contents:
-            #         self.parse_node(e, chunk)
-            #     chunk.append_stub(CLOSE_QUOTE)
-
-            # TODO where to start a new chunk?
-
             # TODO ignore some TexNodes:
             # \color{...}, \begin{thebibliography}{} ...,
             # \label{...}, \cite{...}, +
             # \begin{...}, \end{...}, name=aligned ???
             # \usepackage{...}
-            if elem.name in ['label', 'cite', 'color', 'thebibliography', 'ref', 'eqref']:
+            if elem.name in [
+                'label', 'cite', 'color', 'thebibliography', 'ref', 'eqref', '$',
+                'usepackage', 'addbibresource',  # preamble - do we translate it at all?
+                'tabular',  # to prevent translating '&' as 'and'
+                'algorithm',  # to prevent translating keywords FIXME some text can be inside?
+                'equation',  # to prevent translating keywords FIXME some text can be inside?
+                'BraceGroup',  # FIXME check
+            ]:
                 return
 
             # Start a new chunk
@@ -436,7 +249,6 @@ class Chunker:
                 print('Figure Labels')
             # Append to current chunk
             chunk.append_token(elem)
-        #     print('*', elem)
         # elif isinstance(elem, str):
         #     print('*', elem)  # TODO
         # else:
@@ -455,9 +267,6 @@ class Chunker:
                 if isinstance(t, Token):
                     if not prev_token_was_separator:
                         # Consecutive tokens w/o separator
-                        print('Consecutive tokens w/o separator')
-                        print("<%s>" % (tokens[-1] if len(tokens) > 0 else ""))
-                        print("<%s>" % t)
                         tokens.append(TOKEN_SEP)
                     tokens.append(t)
                     prev_token_was_separator = False
@@ -481,18 +290,42 @@ class Chunker:
         self.chunks = [c for c in chunks if not c.is_empty()]
 
         # Unite small chunks - to reduce requests to translator
-        max_len = 2000
         chunks = []
         cur_len = 0
         cur_chunk = None
         for chunk in self.chunks:
             size = chunk.size()
+            if size >= MAX_LENGTH_TEXT_TRANSLATE:  # Split chunk into several smaller ones
+                if cur_chunk:
+                    # Finalize current chunk
+                    chunks.append(cur_chunk)
+                    cur_len = 0
+                cur_chunk = Chunk()
+                for t in chunk.tokens:
+                    cur_len += len(t)
+                    if cur_len > MAX_LENGTH_TEXT_TRANSLATE and isinstance(t, Token):
+                        # Cut last sep and finalize current chunk
+                        if len(cur_chunk.tokens) > 0:
+                            cur_chunk.tokens.pop()
+                        else:
+                            # Split the token itself
+                            # raise NotImplementedError()
+                            print("WARNING: long token to be splitted: %s" % t)
+                        chunks.append(cur_chunk)
+                        cur_chunk = Chunk()
+                        cur_len = len(t)  # FIXME what if 1 token > max len?
+                    cur_chunk.tokens.append(t)
+
+                chunks.append(cur_chunk)
+                cur_chunk = None
+                continue
+
             if cur_chunk is None:
                 cur_chunk = chunk
                 cur_len = size
                 continue
             cur_len += size + len(TEX_SEP)
-            if cur_len > max_len:
+            if cur_len > MAX_LENGTH_TEXT_TRANSLATE:
                 # Finalize current chunk
                 chunks.append(cur_chunk)
                 cur_chunk = chunk
@@ -522,29 +355,14 @@ class Chunker:
                     print('*', t)
 
 
-def translate_via_texsoup():
-    # read source text
-    # source_path = '../data/source.txt'
-    source_path = '../data/conference_101719.tex'
-    # source_path = '../data/modularity_report.tex'
+def translate_via_texsoup(source_path, output_path):
     with open(source_path, 'r') as f:
         source_text = f.read()
 
-    soup = TexSoup(source_text, tolerance=1)
+    soup = TexSoup(source_text, tolerance=0)
 
-    # # Tokens from special parts of text
-    # tokens = []
-    # for name in ['section', 'section*', 'subsection', 'subsection*',
-    #              'caption', 'title']:  # TODO how to get them all? use names set
-    #     for s in soup.find_all(name):
-    #         for t in s.contents:
-    #             if isinstance(t, Token):
-    #                 tokens.append(t)
-
-    # What to parse
-    to_parse = soup.find('document')
-    if to_parse is None:
-        to_parse = soup
+    # Parse only 'document' part if present
+    to_parse = soup.find('document') or soup
     chunker = Chunker()
     chunker.parse_node(to_parse)
     chunker.finalize()
@@ -552,17 +370,73 @@ def translate_via_texsoup():
     chunker.print()
 
     # save final text
-    final_path = '../data/final.tex'
-    with open(final_path, 'w') as f:
+    with open(output_path, 'w') as f:
         f.write(str(soup))
+
+
+def main():
+    parser = argparse.ArgumentParser(description='Latex document translation via google.translate.')
+    parser.add_argument('-i', '--input', required=True, help='input .tex file path')
+    parser.add_argument('-o', '--output', default='output.tex', help='output .tex file path')
+    # parser.add_argument('--leave-original', action='store_true', help='output .tex file path')
+    # parser.add_argument('--input-lang', default='en', help='language of input document')
+    # parser.add_argument('--output-lang', default='ru', help='language of output document')
+
+    args = parser.parse_args()
+
+    # Assuming all parameters are provided and take valid values.
+    input_path = args.input
+    output_path = args.output  # FIXME check
+    # leave_orig = args.leave_original
+
+    # source_path = '../data/source.txt'
+    # final_path = '../data/final.txt'
+    # leave_orig = True
+
+    translate_via_texsoup(input_path, output_path)
 
 
 if __name__ == '__main__':
     # main()
+
     # text = "know $2+2=4$~\cite{somepaper}? % comment"
     # print re.findall("\\\[\W]|\\\[a-zA-Z]+|%.+|\$[^$]+\$|\$\$[^$]+\$\$", text)
 
     # t = Translator().translate('We use the following label propagation algorithm, lets name it Cordv, where X is a number of iterations.', dest='ru', src='en')
     # print(t.text)
 
-    translate_via_texsoup()
+    # SIGNATURES.update({
+    #     'label': (1, 0),
+    #     'cup': (0, 0),
+    #     'noindent': (0, 0),
+    #     'in': (0, 0),
+    #     'bigl': (0, 0),
+    #     'bigr': (0, 0),
+    #     'left': (0, 0),
+    #     'right': (0, 0),
+    # })
+
+    # 1. Incorrect parse of mismatch brackets
+    # TexSoup(r""" $ \bigl[ \bigl] $""")  # works fine
+    # TexSoup(r""" $ \bigl[ \bigl) $""")  # EOFError: [Line: 0, Offset: 11] "$" env expecting $. Reached end of file.
+    # A workaround works
+    # TexSoup(r""" $ \biggl[ \biggl ) $""")
+
+    # 2. Incorrect parse of \left and \right
+    # TexSoup(r""" $ \left[ \right) $""")  # compiles, but TexSoup treats them like 'left[' and 'right)' instead of 'left' and 'right'
+    # TexSoup(r""" $ \left[ \right) $""")  # so this also compiles
+
+    # TexSoup(r""" $ \left [ \right ] $""")  # works fine
+    # TexSoup(r""" $ \left [ \right ) $""")  # EOFError: [Line: 0, Offset: 13] "$" env expecting $. Reached end of file.
+    # A workaround works but
+    # soup = TexSoup(r"""$ \cup [0, \infty)$""")  # works fine
+    # soup = TexSoup(r""" \begin{equation} \cup [0, \infty) \end{equation}""")  # fails
+    # soup = TexSoup(r""" \begin{equation} \bigl[ \bigr) \end{equation}""", tolerance=0)  # fails
+
+    # TexSoup(r"""$S \cup [0, \infty)$""")
+
+    # # source_path = '../data/source.txt'
+    source_path = '../data/conference_101719.tex'
+    # source_path = '../data/modularity_report.tex'
+
+    translate_via_texsoup(source_path, '../data/final.tex')

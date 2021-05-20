@@ -1,0 +1,387 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% % Lines starting with % are comments, which are ignored.
+% % This is a handy way of indicating the date and version of
+% % your document, to wit:
+% %
+% % LaTeX sample file
+% % Modified March, 2002
+% %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% % Title and author(s)
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\title{The \LaTeX\  template file for an article in the
+       $\Pi$ME Journal}
+\author{Primus Scriber\thanks{
+                  College of the Enlightenment}
+        \and
+        Theeco Author\thanks{
+                      The Virtual University
+                  }\thanks{This work was
+                  supported by NSB grant number G983578765401.}
+        }
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\documentclass{article}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% %
+% % The next command allows your in import encapsulated
+% % postscript files, .epsf or .eps files, which
+% % contain vector graphic image data.
+% %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\usepackage{graphicx}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% % We use newtheorem to define theorem-like structures
+% %
+% % Here are some common ones. . .
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}{Lemma}
+\newtheorem{proposition}{Proposition}
+\newtheorem{scolium}{Scolium}   %% And a not so common one.
+\newtheorem{definition}{Definition}
+\newenvironment{proof}{{\sc Proof:}}{~\hfill QED}
+\newenvironment{AMS}{}{}
+\newenvironment{keywords}{}{}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% %   The first thanks indicates your affiliation
+% %
+% %  Just the name here.
+% %
+% % Your mailing address goes at the end.
+% %
+% % \thanks is also how you indicate grant support
+% %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\begin{document}
+\newpage
+\maketitle
+%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% abstract, keywords and Subject classification are optional.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{abstract}
+    This is a sample file.
+    You can use it as a guide for your submission.
+\end{abstract}
+
+% Most people don't use these, so they are "commented out"
+% by starting the lines with a "%"
+%\begin{keywords}
+%   \LaTeX, typesetting
+%\end{keywords}
+
+%\begin{AMS}
+%   50C60, 18C25
+%\end{AMS}
+
+%%%%%%%%%%%%%%%%%%%%%%
+% % Here is the start of the Text
+%%%%%%%%%%%%%%%%%%%%%%
+\section{\LaTeX}
+Use sectioning commands for headings. Often longer articles are divided into a few sections.
+
+
+\LaTeX knows that a new paragraph has started if you skip a line in the input file.
+It will automatically indent the proper amount.
+
+You must use labelling commands, e.g. \verb2\label2, \verb2\ref2,
+\verb2\bibitem2, and \verb2\cite2, to refer to sections of your document, such as
+see Section~\ref{AbelSection}, see Figure~\ref{SelfdualFig}, or bibliography entries,
+such as see~\cite{MyFavorite}.  Otherwise the look of the numbers, and sometimes the numbers
+themselves, will be wrong in the final version at the printer.
+
+\section{Abel's Theorem}\label{AbelSection}
+     In this section we give some background.  For instance
+the following definition.
+
+\begin{definition}
+     A {\em semi-quaver} is defined to be half a quaver.
+\end{definition}
+
+If that definition is not enough, here is another:
+
+\begin{definition}
+    The {\em order} of a note $n$ in a quaver $Q$,
+    $O(n,Q)$, is defined by the equation
+         $$ O(n,Q) = \int_{0}^{\infty} \sin(n^{2} t)/(1-Qn) dt. $$
+\end{definition}
+
+Some equations one writes inline, such as
+{\em Pythagoras' Theorem,}
+$c^{2} = a^{2} + b^{2}$,
+while others are better off as displayed
+equations, like the quadratic formula,
+  $$x = \frac{-b \pm \sqrt{b^{2} - 4ac}}{2a}$$
+which solves the quadratic $ax^{2} + bx + c = 0$. If the quadratic
+formula is written inline,
+  $x = \frac{-b \pm \sqrt{b^{2} - 4ac}}{2a}$,
+it is readable but not very nice.
+This form,
+  $x = (-b \pm \sqrt{b^{2} - 4ac})/2a$,
+is harder to read as a fraction, but better because of the larger type.
+
+Every inline equation must be part of a sentence:  Since $x < 1/2$ we have
+$x + y < x + 1/2$.  Inline fractions, such as $x < \frac{1}{2}$, are discouraged but
+not prohibited.
+
+
+You can use formulae in theorems, as in the following.
+
+\begin{theorem}\label{ContThrm}
+    If $f(x)$ is defined by the equation
+    \begin{equation}\label{SplitFunc}
+         f(x) = \left\{ \begin{array}{rl}
+                          x^{2}, & \mbox{~for $x \geq 0$.} \\
+                         -x^{2}, & \mbox{~for $x < 0$}
+                         \end{array} \right.
+   \end{equation}
+   Then $f(x)$ is continuous at $x=0$.
+\end{theorem}
+
+
+\begin{proof}
+    Since
+          $\lim_{x \rightarrow 0^{-}} f(x) =
+           \lim_{x \rightarrow 0^{-}} -x^{2} = 0$
+    and
+          $\lim_{x \rightarrow 0^{+}} f(x) =
+           \lim_{x \rightarrow 0^{+}} x^{2} = 0$
+    it follows that
+         $\lim_{x \rightarrow 0} f(x) = 0 = f(x)$,
+         as required.
+\end{proof}
+
+
+
+
+
+   Did you notice the grammatical error in
+   Theorem~\ref{ContThrm}?  The sentence leading
+   into equation~\ref{SplitFunc} is never completed.
+   %%%% Notice references are done with \ref
+   %%%% you can label any structure that produces a number
+   The following
+   theorem is worded correctly.
+\begin{theorem}
+    If $f(x)$ is defined by the equation
+    \begin{equation}
+         f(x) = \left\{ \begin{array}{rl}
+                          x^{2}, & \mbox{~for $x \geq 0$} \\
+                         -x^{2}, & \mbox{~for $x < 0$}
+                         \end{array}\right.,
+   \end{equation}
+   then $f(x)$ is continuous at $x=0$.
+\end{theorem}
+
+   One rule of thumb of mathematical composition is to
+   use mathematical notation inside sentences only for
+   nouns.  For example, one writes that ``$R$ is the the
+   radius of a circle'', but not that ``the radius of the
+   circle ='s the side length of the square''.  According to
+   this rule it is correct to write that
+   ``$(x>0) \Rightarrow (x^{3} > 0)$'' since the double arrow is part of
+   an equation, but not to write
+   ``$x$ is positive $\Rightarrow$ $x^{3}$ is positive'', since the
+   double arrow is acting as a verb.
+
+Here is another kind of common structure:
+
+\begin{theorem}
+   The following are equivalent.
+   \begin{enumerate}
+      \item $a \leq b$
+      \item $b \geq a$
+      \item $a = b$ or $a<b$
+   \end{enumerate}
+\end{theorem}
+
+And here is a typical matrix
+ $$
+ \left[
+ \begin{array}{rrrrrrrr}
+    0 & -1 & 0 & 1 & 0 & 0 & 0 & 0  \\
+    1 & 0 & 0 & 0 & -1 & 0 & 0 & 0  \\
+    0 & 0 & \alpha & \alpha & -\alpha & -\alpha & 0 & 0  \\
+    \alpha & \alpha & 0 & 0 & 0 & 0 & -\alpha & -\alpha  \\
+    0 & 0 & 1 & 0 & 0 & 0 & -1 & 0  \\
+    0 & 0 & 0 & 0 & 0 & 1 & 0 & -1
+ \end{array}
+ \right]
+ $$
+
+
+Sometimes you want to use a figure.
+\begin{figure}[hbt]
+     \centering
+     \unitlength=0.75mm
+     \begin{picture}(100.00,95.00)
+          \put(20.00,50.00){\line(1,2){5.00}}
+          \put(35.00,60.00){\line(1,-2){5.00}}
+          \put(40.00,50.00){\line(-2,-1){10.00}}
+          \put(30.00,45.00){\line(-2,1){10.00}}
+          \put(20.00,50.00){\line(-1,0){15.00}}
+          \put(40.00,50.00){\line(1,0){20.00}}
+          \put(60.00,50.00){\line(2,1){10.00}}
+          \put(70.00,55.00){\line(2,-1){10.00}}
+          \put(80.00,50.00){\line(-1,-2){5.00}}
+          \put(75.00,40.00){\line(-1,0){10.00}}
+          \put(65.00,40.00){\line(-1,2){5.00}}
+          \put(80.00,50.00){\line(1,0){15.00}}
+          \put(50.00,40.00){\line(0,1){20.00}}
+          \put(50.00,40.00){\line(1,-2){5.00}}
+          \put(55.00,30.00){\line(-1,-2){5.00}}
+          \put(50.00,20.00){\line(-2,1){10.00}}
+          \put(40.00,25.00){\line(0,1){10.00}}
+          \put(40.00,35.00){\line(2,1){10.00}}
+          \put(50.00,20.00){\line(0,-1){15.00}}
+          \put(50.00,60.00){\line(-1,2){5.00}}
+          \put(45.00,70.00){\line(1,2){5.00}}
+          \put(50.00,80.00){\line(2,-1){10.00}}
+          \put(60.00,65.00){\line(-2,-1){10.00}}
+          \put(35.00,60.00){\line(3,2){15.00}}
+          \put(60.00,65.00){\line(2,-3){10.00}}
+          \put(65.00,40.00){\line(-3,-2){15.00}}
+          \put(40.00,35.00){\line(-2,3){10.00}}
+          \put(45.00,75.00){\line(1,-1){5.00}}
+          \put(75.00,55.00){\line(-1,-1){5.00}}
+          \put(75.00,40.00){\line(-1,-1){15.00}}
+          \put(60.00,25.00){\line(-1,0){5.00}}
+          \put(55.00,25.00){\line(-1,1){5.00}}
+          \put(40.00,25.00){\line(-1,1){15.00}}
+          \put(25.00,40.00){\line(0,1){5.00}}
+          \put(25.00,45.00){\line(1,1){5.00}}
+          \put(25.00,60.00){\line(1,0){10.00}}
+          \put(60.00,65.00){\line(0,1){10.00}}
+          \put(60.00,75.00){\line(1,-1){15.00}}
+          \put(75.00,60.00){\line(0,-1){5.00}}
+          \put(25.00,60.00){\line(1,1){15.00}}
+          \put(40.00,75.00){\line(1,0){5.00}}
+          \put(30.00,50.00){\line(2,1){20.00}}
+          \put(50.00,70.00){\line(1,-2){10.00}}
+          \put(70.00,50.00){\line(-2,-1){20.00}}
+          \put(50.00,30.00){\line(-1,2){10.00}}
+          \put(50.00,70.00){\line(1,1){10.00}}
+          \put(60.00,80.00){\line(1,0){10.00}}
+          \put(70.00,80.00){\line(1,-1){10.00}}
+          \put(80.00,70.00){\line(0,-1){20.00}}
+          \put(70.00,50.00){\line(1,-1){10.00}}
+          \put(80.00,40.00){\line(0,-1){10.00}}
+          \put(80.00,30.00){\line(-3,-2){15.00}}
+          \put(65.00,20.00){\line(-1,0){15.00}}
+          \put(50.00,30.00){\line(-1,-1){10.00}}
+          \put(40.00,20.00){\line(-1,0){10.00}}
+          \put(30.00,20.00){\line(-1,1){10.00}}
+          \put(20.00,30.00){\line(0,1){20.00}}
+          \put(30.00,50.00){\line(-1,1){10.00}}
+          \put(20.00,60.00){\line(0,1){10.00}}
+          \put(20.00,70.00){\line(1,1){10.00}}
+          \put(30.00,80.00){\line(1,0){20.00}}
+          \put(50.00,70.00){\line(3,-1){15.00}}
+          \put(65.00,65.00){\line(1,-2){5.00}}
+          \put(70.00,50.00){\line(-1,-3){5.00}}
+          \put(65.00,35.00){\line(-2,-1){10.00}}
+          \put(50.00,30.00){\line(-3,1){15.00}}
+          \put(35.00,35.00){\line(-1,2){5.00}}
+          \put(30.00,50.00){\line(1,3){5.00}}
+          \put(35.00,65.00){\line(2,1){10.00}}
+          \put(20.00,50.00){\circle*{3.00}}
+          \put(30.00,45.00){\circle*{3.00}}
+          \put(40.00,50.00){\circle*{3.00}}
+          \put(35.00,60.00){\circle*{3.00}}
+          \put(25.00,60.00){\circle*{3.00}}
+          \put(50.00,70.00){\circle*{3.00}}
+          \put(70.00,55.00){\circle*{3.00}}
+          \put(80.00,50.00){\circle*{3.00}}
+          \put(75.00,40.00){\circle*{3.00}}
+          \put(65.00,40.00){\circle*{3.00}}
+          \put(60.00,50.00){\circle*{3.00}}
+          \put(50.00,30.00){\circle*{3.00}}
+          \put(45.00,70.00){\circle{3.00}}
+          \put(50.00,80.00){\circle{3.00}}
+          \put(60.00,75.00){\circle{3.00}}
+          \put(60.00,65.00){\circle{3.00}}
+          \put(30.00,50.00){\circle{3.00}}
+          \put(40.00,35.00){\circle{3.00}}
+          \put(40.00,25.00){\circle{3.00}}
+          \put(50.00,20.00){\circle{3.00}}
+          \put(55.00,30.00){\circle{3.00}}
+          \put(50.00,40.00){\circle{3.00}}
+          \put(70.00,50.00){\circle{3.00}}
+          \put(50.00,60.00){\circle{3.00}}
+          \put(50.00,80.00){\line(0,1){10.00}}
+          \put(50.00,95.00){\makebox(0,0)[cc]{$\vdots$}}
+          \put(50.00,0.00){\makebox(0,0)[cc]{$\vdots$}}
+          \put(100.00,50.00){\makebox(0,0)[cc]{$\ldots$}}
+          \put(0.00,50.00){\makebox(0,0)[cc]{$\ldots$}}
+     \end{picture}
+     \caption{A polyhedron with all self--dualities of
+              order~4\label{SelfdualFig}}
+\end{figure}
+Figure~\ref{SelfdualFig} was made (using TeXCad)
+with the \LaTeX picture
+environment.  Sometimes a figure is just too
+complicated to draw with these simple commands.  In this case
+we use epsf files.
+For instance in Figure~\ref{ParabFig} the picture of the
+parabola was produced in Maple
+and saved as an epsf (eps) file, (pure ascii mode, no
+preview, no thumbnail).
+  \begin{figure}[htb]
+      \centering
+      \includegraphics[width=2.5in]{para01.eps}
+      \caption{$y = x^{2}$\label{ParabFig}}
+  \end{figure}
+When the document is processed, the .eps file must reside
+in the same directory as the .tex file.  Also, the command
+\verb2\usepackage{graphicx}2 should occur near the top of the document.
+Notice that this figure has been scaled so that the overall size
+is convenient (width 2.5 inches), but now the text is far too small.
+To avoid this problem it is often best to
+generate a figure which is approximately the same size as
+it will appear in the document.
+
+A complete source of information on writing documents
+in \LaTeX is~\cite{MyFavorite}.  (Look in the source
+so see how to produce that citation.)
+Last of all is the style of the $\Pi$ME biliography:
+Author's names in small caps, journal article titles
+uncapitalized and in italics, book titles capitalized
+and in quotes.
+
+\begin{thebibliography}{9}
+     \bibitem{MyFavorite}
+         {\sc Lamport, L.,}
+         ``\LaTeX - A Document Preparation System'',
+         Addison-Wesley, 1998.
+
+    \bibitem{BobsPaper}
+         {\sc Fillioque R.} and {\sc Heliotrope, B.,}
+         {\em Why Fermat's last theorem is really a lemma,}
+         American Mathematical Weekly,
+         Vol. 7, No. 1, pp 115-116, 1998.
+
+\end{thebibliography}
+
+
+
+\section*{About the author:}
+   We would like a short biographical sketch,
+   beyond just your affiliation to be placed
+   after the bibliography.
+   And below that, your full address.
+
+
+
+\subsection*{Primus Scriber}
+   College of the Enlightenment,
+   Philadelphia, Pennsylvania, 42345-6543$\pm\epsilon$.
+   pscriber@cenet.edu
+
+\subsection*{Theco Author}~
+   Department of Statistics,
+   The Virtual University,
+   New York, NY 13291-5555.
+   also@aol.com
+
+\end{document}

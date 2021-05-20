@@ -11,6 +11,8 @@ from googletrans import Translator
 
 SRC_LANG = 'en'
 DST_LANG = 'ru'
+checked_langs = {'en', 'ru'}
+
 MAX_LENGTH_TEXT_TRANSLATE = 2000  # limit for google translate at once
 
 MATH_STUB = 'MATH_STUB'  # used to replace math formulas before auto-translation
@@ -20,6 +22,19 @@ TOKEN_SEP = 'TOKEN_SEP'  # used to separate consecutive tokens
 NEW_LINE = 'NEW_LINE'  # used for a moment to handle '\n's
 
 TRANSLATOR = Translator(raise_exception=True)
+
+# Workaround to TexSoup according to https://github.com/alvinwan/TexSoup/issues/115
+# TODO check when bug is fixed
+SIGNATURES.update({
+    'def': (0, 0),
+    'cup': (0, 0),
+    'noindent': (0, 0),
+    'in': (0, 0),
+    'bigl': (0, 0),
+    'bigr': (0, 0),
+    'left': (0, 0),
+    'right': (0, 0),
+})
 
 
 def google_translate_text(text: str, src_lang=SRC_LANG, dst_lang=DST_LANG) -> str:
@@ -45,11 +60,11 @@ class Chunk:
     """
     # Heuristic rules to exclude token from chunk
     exclude_rules = [
-        # Token is too short, e.g. '*', 'th', 'st'
-        lambda token: len(token) < 3,
+        # # Token is too short, e.g. '*', 'th', 'st'
+        # lambda token: len(token) < 3,
 
         # Token contains mainly special symbols
-        lambda token: sum(c.isalpha() for c in token) < 3,
+        lambda token: len(token.strip()) > 2 > sum(c.isalpha() for c in token),
     ]
     # Exceptions for rules
     exceptions = [
@@ -123,8 +138,9 @@ class Chunk:
 
         # TODO process text after translator:
         # remove whitespaces between word and * (Conference Paper Title* -> Название доклада конференции *)
-        # remove whitespaces around / (Wb/m -> Wb / m)
-        # remove extra whitespaces within various quotes (``0,25'' -> `` 0,25 '')
+        # remove whitespaces around '/' (Wb/m -> Wb / m)
+        # remove extra whitespaces within various quotes (``0,25'' -> `` 0,25 '', sometimes `` 0,25 ' '),
+        # around '~', etc
         # ...
 
         # Split translated text back into tokens
@@ -148,16 +164,14 @@ class Chunker:
     Parses Texsoup tree into chunks
     """
     # TODO ignore some TexNodes:
-    # \color{...}, \begin{thebibliography}{} ...,
-    # \label{...}, \cite{...}, +
     # \aligned ???
+    # \begin{array}{this argument}
     ignore_texnodes = [
         'label', 'cite', 'color', 'thebibliography', 'ref', 'eqref', '$',
         'usepackage', 'addbibresource',  # preamble - do we translate it at all?
         'tabular',  # to prevent translating '&' as 'and'
         'algorithm',  # to prevent translating keywords FIXME some text could be inside?
         'equation',  # to prevent translating keywords FIXME some text could be inside?
-        'BraceGroup',  # FIXME check
     ]
 
     def __init__(self):
@@ -178,16 +192,19 @@ class Chunker:
 
             if new_chunk.is_empty():
                 chunk.append_stub(TEX_STUB)
+            elif False:
+                # TODO in some cases we want to embed parts into chunk, e.g.
+                # \textit{...}, etc
+                # {\em ...} and other simple BraceGroups
+                pass
             else:
                 chunk.append_stub(TEX_SEP)
 
         elif isinstance(elem, Token):
-            if 'Figure Labels' in elem.text:
-                print('Figure Labels')
             # Append to current chunk
             chunk.append_token(elem)
         # elif isinstance(elem, str):
-        #     print('*', elem)  # TODO
+        #     print('*', elem)  # FIXME
         # else:
         #     print('**', type(elem), elem)
         #     # raise ValueError("")
@@ -292,19 +309,42 @@ class Chunker:
                     print('*', t)
 
 
-def translate_via_texsoup(source_path, output_path):
+def translate_via_texsoup(source_path, output_path, input_lang=SRC_LANG, output_lang=DST_LANG,
+                          verbose=False):
+    assert input_lang != output_lang
+    assert input_lang in checked_langs and output_lang in checked_langs
     with open(source_path, 'r') as f:
         source_text = f.read()
 
-    # TODO TexSoup has many bugs, see https://github.com/alvinwan/TexSoup/issues
+    # FIXME TexSoup has many bugs, see https://github.com/alvinwan/TexSoup/issues
     soup = TexSoup(source_text, tolerance=0)
 
     chunker = Chunker()
+
+    # TODO \title{} could be outside of document - handle it separately
+    # TODO Same for \author{} etc?
     # Parse only '\begin{document} ... \end{document}' part if present
-    chunker.parse_node(soup.find('document') or soup)
+    # to avoid errors while parsing preamble (e.g. \newtheorem{theorem}{} -> \newtheorem{теорема}{})
+    document = soup.find('document')
+    if document:
+        # Insert target language babel package before document
+        for i, node in enumerate(soup.contents):
+            if hasattr(node, '__match__') and node.__match__('document', attrs={}):
+                language = {
+                    'ru': 'russian',
+                    'en': 'english',
+                }[output_lang]
+                # FIXME position is guessed. self._content and self.content have different numerations
+                soup.insert(i, TexSoup("\n"), TexSoup(r"""\usepackage[%s]{babel}""" % language), TexSoup("\n"))
+                break
+
+        chunker.parse_node(document)
+    else:
+        chunker.parse_node(soup)
     chunker.finalize()
     chunker.translate()
-    chunker.print()
+    if verbose:
+        chunker.print()
 
     # TODO post-process text
     # add \usepackage[russian]{babel} (or target lang)
@@ -323,21 +363,22 @@ def main():
     parser = argparse.ArgumentParser(description='Latex document translation via google.translate.')
     parser.add_argument('-i', '--input', required=True, help='input Tex file path')
     parser.add_argument('-o', '--output', default='output.tex', help='output Tex file path')
+    parser.add_argument('-v', '--verbose', action='store_true', help='print chunks')
     # parser.add_argument('--leave-original', action='store_true', help='output .tex file path')
     # parser.add_argument('--input-lang', default='en', help='language of input document')
     # parser.add_argument('--output-lang', default='ru', help='language of output document')
 
     args = parser.parse_args()
+    print(args)
 
     input_path = args.input
-    output_path = args.output or 'output.tex'
+    output_path = args.output or '../data/output.tex'
 
-    translate_via_texsoup(input_path, output_path)
+    translate_via_texsoup(input_path, output_path, verbose=args.verbose)
 
 
 if __name__ == '__main__':
-    # main()
+    main()
 
-    # translate_via_texsoup('../data/source.tex', '../data/final.tex')
-    translate_via_texsoup('../data/modularity_report.tex', '../data/final.tex')
     # translate_via_texsoup('../data/conference_101719.tex', '../data/final.tex')
+    # translate_via_texsoup('../data/pmetemplate03.tex', '../data/final.tex')

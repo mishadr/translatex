@@ -1,3 +1,4 @@
+import json
 # coding=utf-8
 import argparse
 import itertools
@@ -6,8 +7,10 @@ from TexSoup.data import BraceGroup
 from TexSoup import TexSoup, TexNode
 from TexSoup.reader import SIGNATURES
 from TexSoup.utils import Token
-from googletrans import Translator
-
+from googletrans import Translator, urls, LANGUAGES, LANGCODES
+from googletrans.client import RPC_ID
+from googletrans.constants import SPECIAL_CASES
+from googletrans.models import TranslatedPart, Translated
 
 SRC_LANG = 'en'
 DST_LANG = 'ru'
@@ -15,13 +18,140 @@ checked_langs = {'en', 'ru'}
 
 MAX_LENGTH_TEXT_TRANSLATE = 2000  # limit for google translate at once
 
+# MATH_STUB = 'math_stub'  # used to replace math formulas before auto-translation
+# TEX_STUB = 'tex_stub'  # used to replace short Tex commands within one piece of text
+# TEX_SEP = '\ntex_sep'  # used to separate pieces of text
+# TOKEN_SEP = 'token_sep'  # used to separate consecutive tokens
+# NEW_LINE = 'new_line'  # used for a moment to handle '\n's
 MATH_STUB = 'MATH_STUB'  # used to replace math formulas before auto-translation
 TEX_STUB = 'TEX_STUB'  # used to replace short Tex commands within one piece of text
 TEX_SEP = '\nTEX_SEP\n'  # used to separate pieces of text
 TOKEN_SEP = 'TOKEN_SEP'  # used to separate consecutive tokens
 NEW_LINE = 'NEW_LINE'  # used for a moment to handle '\n's
 
-TRANSLATOR = Translator(raise_exception=True)
+
+# FIXME Trying to fix translator doing TEX_SEP -> Tex_sep
+class MyTranslator(Translator):
+    service_urls = ['clients5.google.com/translate_a/t']
+
+    def _translate(self, text: str, dest: str, src: str):
+        # url = urls.TRANSLATE_RPC.format(host=self._pick_service_url())
+        url = 'https://clients5.google.com/translate_a/t'
+        data = {
+            'q': text,
+        }
+        params = {
+            'client': 'dict-chrome-ex',
+            'sl': src,
+            'tl': dest,
+            'q': text
+        }
+        r = self.client.post(url, params=params, data=data)
+
+        if r.status_code != 200 and self.raise_Exception:
+            raise Exception('Unexpected status code "{}" from {}'.format(
+                r.status_code, self.service_urls))
+
+        return r.text, r
+
+    def translate(self, text: str, dest='en', src='auto'):
+        dest = dest.lower().split('_', 1)[0]
+        src = src.lower().split('_', 1)[0]
+
+        if src != 'auto' and src not in LANGUAGES:
+            if src in SPECIAL_CASES:
+                src = SPECIAL_CASES[src]
+            elif src in LANGCODES:
+                src = LANGCODES[src]
+            else:
+                raise ValueError('invalid source language')
+
+        if dest not in LANGUAGES:
+            if dest in SPECIAL_CASES:
+                dest = SPECIAL_CASES[dest]
+            elif dest in LANGCODES:
+                dest = LANGCODES[dest]
+            else:
+                raise ValueError('invalid destination language')
+
+        origin = text
+        data, response = self._translate(text, dest, src)
+
+        token_found = False
+        square_bracket_counts = [0, 0]
+        # resp = ''
+        # for line in data.split('\n'):
+        #     token_found = token_found or f'"{RPC_ID}"' in line[:30]
+        #     if not token_found:
+        #         continue
+        #
+        #     is_in_string = False
+        #     for index, char in enumerate(line):
+        #         if char == '\"' and line[max(0, index - 1)] != '\\':
+        #             is_in_string = not is_in_string
+        #         if not is_in_string:
+        #             if char == '[':
+        #                 square_bracket_counts[0] += 1
+        #             elif char == ']':
+        #                 square_bracket_counts[1] += 1
+        #
+        #     resp += line
+        #     if square_bracket_counts[0] == square_bracket_counts[1]:
+        #         break
+
+        # data = json.loads(resp)
+        data = json.loads(data)
+        translated = [sent['trans'] for sent in data['sentences'][:-1]]
+        if isinstance(translated, list):
+            translated = ''.join(translated)
+        # parsed = json.loads(data[0][2])
+        # # not sure
+        # should_spacing = parsed[1][0][0][3]
+        # translated_parts = list(map(lambda part: TranslatedPart(part[0], part[1] if len(part) >= 2 else []), parsed[1][0][0][5]))
+        # translated = (' ' if should_spacing else '').join(map(lambda part: part.text, translated_parts))
+        #
+        # if src == 'auto':
+        #     try:
+        #         src = parsed[2]
+        #     except:
+        #         pass
+        # if src == 'auto':
+        #     try:
+        #         src = parsed[0][2]
+        #     except:
+        #         pass
+        #
+        # # currently not available
+        # confidence = None
+        #
+        # origin_pronunciation = None
+        # try:
+        #     origin_pronunciation = parsed[0][0]
+        # except:
+        #     pass
+        #
+        # pronunciation = None
+        # try:
+        #     pronunciation = parsed[1][0][0][1]
+        # except:
+        #     pass
+        #
+        # extra_data = {
+        #     'confidence': confidence,
+        #     'parts': translated_parts,
+        #     'origin_pronunciation': origin_pronunciation,
+        #     'parsed': parsed,
+        # }
+        result = Translated(src=src, dest=dest, origin=origin,
+                            text=translated,
+                            pronunciation=None,
+                            parts=None,
+                            extra_data=None,
+                            response=response)
+        return result
+
+TRANSLATOR = MyTranslator(raise_exception=True)
+
 
 # Workaround to TexSoup according to https://github.com/alvinwan/TexSoup/issues/115
 # TODO check when bug is fixed
@@ -37,16 +167,35 @@ SIGNATURES.update({
 })
 
 
+def lsplit_long_text(text: str, limit=MAX_LENGTH_TEXT_TRANSLATE):
+    # Find any of separators
+    print("lsplit_long_text")
+    for sep in ['\n', '. ']:
+        split_ix = text.rfind(sep, 0, limit)
+        if split_ix == -1:
+            continue
+    if split_ix == -1:
+        raise RuntimeError(
+            "Text is too long (%s) for google translate (must be < %s) and doesn't have a "
+            "newline or even '. '. Insert them or some math in the middle and try again. "
+            "(not fixed yet). The text was: '%s'" % (len(text), limit, text))
+    return text[:split_ix], sep, text[split_ix+len(sep):]
+
+
 def google_translate_text(text: str, src_lang=SRC_LANG, dst_lang=DST_LANG) -> str:
     if len(text) > MAX_LENGTH_TEXT_TRANSLATE:
-        raise RuntimeError("Text is too long (%s) for google translate (must be < %s)."
-                           "Insert some math in the middle and try again. (not fixed yet)."
-                           "The text was: '%s'" % (
-            len(text), MAX_LENGTH_TEXT_TRANSLATE, text))
+        result = ""
+        rest_text = text
+        while len(rest_text) > MAX_LENGTH_TEXT_TRANSLATE:
+            small_text, sep, rest_text = lsplit_long_text(text)
+            result += google_translate_text(small_text, src_lang, dst_lang)
+            result += sep
+        return result
+
     # FIXME after several frequent requests it will ban your IP, what about proxies?
     print("Translating text of length %s" % len(text))
     res = TRANSLATOR.translate(text, dest=dst_lang, src=src_lang).text
-    # res = t.upper()
+    # res = text.upper()
     print(res)
     return res
 
@@ -140,6 +289,7 @@ class Chunk:
         # remove whitespaces between word and * (Conference Paper Title* -> Название доклада конференции *)
         # remove whitespaces around '/' (Wb/m -> Wb / m)
         # remove extra whitespaces within various quotes (``0,25'' -> `` 0,25 '', sometimes `` 0,25 ' '),
+        # remove extra whitespaces at '\{' -> '\ {'
         # around '~', etc
         # ...
 
@@ -167,7 +317,7 @@ class Chunker:
     # \aligned ???
     # \begin{array}{this argument}
     ignore_texnodes = [
-        'label', 'cite', 'color', 'thebibliography', 'ref', 'eqref', '$',
+        'label', 'cite', 'color', 'thebibliography', 'ref', 'eqref', '$', 'href',
         'usepackage', 'addbibresource',  # preamble - do we translate it at all?
         'tabular',  # to prevent translating '&' as 'and'
         'algorithm',  # to prevent translating keywords FIXME some text could be inside?
@@ -378,7 +528,8 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    # main()
 
+    translate_via_texsoup('../data/abstracts2.tex', '../data/final2.tex')
     # translate_via_texsoup('../data/conference_101719.tex', '../data/final.tex')
     # translate_via_texsoup('../data/pmetemplate03.tex', '../data/final.tex')

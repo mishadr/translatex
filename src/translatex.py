@@ -2,15 +2,17 @@ import json
 # coding=utf-8
 import argparse
 import itertools
+import re
 
 from TexSoup.data import BraceGroup
 from TexSoup import TexSoup, TexNode
 from TexSoup.reader import SIGNATURES
 from TexSoup.utils import Token
 from googletrans import Translator, urls, LANGUAGES, LANGCODES
-from googletrans.client import RPC_ID
+# from googletrans.client import RPC_ID
 from googletrans.constants import SPECIAL_CASES
-from googletrans.models import TranslatedPart, Translated
+# from googletrans.models import TranslatedPart
+from googletrans.models import Translated
 
 SRC_LANG = 'en'
 DST_LANG = 'ru'
@@ -24,9 +26,15 @@ MAX_LENGTH_TEXT_TRANSLATE = 2000  # limit for google translate at once
 # TOKEN_SEP = 'token_sep'  # used to separate consecutive tokens
 # NEW_LINE = 'new_line'  # used for a moment to handle '\n's
 MATH_STUB = 'MATH_STUB'  # used to replace math formulas before auto-translation
-TEX_STUB = 'TEX_STUB'  # used to replace short Tex commands within one piece of text
-TEX_SEP = '\nTEX_SEP\n'  # used to separate pieces of text
-TOKEN_SEP = 'TOKEN_SEP'  # used to separate consecutive tokens
+
+TEX_STUB = '<span = TEXSTUB /span>'  # used to replace short Tex commands within one piece of text
+TEX_SEP = '\n<span = TEXSEP /span>\n'  # used to separate pieces of text
+TOKEN_SEP = '<span = TOKENSEP /span>'  # used to separate consecutive tokens
+
+TEX_STUB_PAT = re.compile('< *\w+ *= *(?:TEXSTUB|ТЕКСТУБ) *\/ *\w+ *>')  # FIXME only for russian
+TEX_SEP_PAT = re.compile('\n< *\w+ *= *(?:TEXSEP|ТЕКСЕП) *\/ *\w+ *>\n')  # FIXME only for russian
+TOKEN_SEP_PAT = re.compile('< *\w+ *= *(?:TOKENSEP|ТОКЕНСЕП|ТОКЕНСЭП) *\/ *\w+ *>')  # FIXME only for russian
+
 NEW_LINE = 'NEW_LINE'  # used for a moment to handle '\n's
 
 
@@ -145,7 +153,7 @@ class MyTranslator(Translator):
         result = Translated(src=src, dest=dest, origin=origin,
                             text=translated,
                             pronunciation=None,
-                            parts=None,
+                            # parts=None,
                             extra_data=None,
                             response=response)
         return result
@@ -296,8 +304,10 @@ class Chunk:
         # Split translated text back into tokens
         # TODO assert tokens don't contain stubs text besides that we put there
         parts = [dest_text]
-        for sep in [TEX_SEP, TEX_STUB, TOKEN_SEP]:
-            parts = itertools.chain.from_iterable([p.split(sep) for p in parts])
+        # for sep in [TEX_SEP, TEX_STUB, TOKEN_SEP]:
+        #     parts = itertools.chain.from_iterable([p.split(sep) for p in parts])
+        for sep in [TEX_SEP_PAT, TEX_STUB_PAT, TOKEN_SEP_PAT]:
+            parts = itertools.chain.from_iterable([sep.split(p) for p in parts])
         parts = list(parts)
 
         # We suppose tokens list was [Token, *, Token, *, .., Token]
@@ -317,11 +327,13 @@ class Chunker:
     # \aligned ???
     # \begin{array}{this argument}
     ignore_texnodes = [
-        'label', 'cite', 'color', 'thebibliography', 'ref', 'eqref', '$', 'href',
+        'label', 'cite', 'color', 'bibliography', 'thebibliography', 'bibliographystyle', 'ref', 'eqref', '$', 'href',
         'usepackage', 'addbibresource',  # preamble - do we translate it at all?
         'tabular',  # to prevent translating '&' as 'and'
         'algorithm',  # to prevent translating keywords FIXME some text could be inside?
         'equation',  # to prevent translating keywords FIXME some text could be inside?
+        'align',  # to prevent translating keywords FIXME some text could be inside?
+        'align*',  # to prevent translating keywords FIXME some text could be inside?
     ]
 
     def __init__(self):
@@ -530,6 +542,10 @@ def main():
 if __name__ == '__main__':
     # main()
 
-    translate_via_texsoup('../data/abstracts2.tex', '../data/final2.tex')
+    # translate_via_texsoup('../data/abstracts2.tex', '../data/final2.tex')
     # translate_via_texsoup('../data/conference_101719.tex', '../data/final.tex')
     # translate_via_texsoup('../data/pmetemplate03.tex', '../data/final.tex')
+    translate_via_texsoup('../data/Гасн/draft/final.tex', '../data/Гасн/draft/final2.tex')
+
+    # FIXME hack to avoid errors due to '\left(' etc.
+    #  "(\\left|\\right|\\big)(\(|\)|\\\{|\\\}|\[|\]|)" -> "$1$2 "

@@ -2,6 +2,7 @@ import json
 # coding=utf-8
 import argparse
 import itertools
+import logging
 import re
 
 from TexSoup.data import BraceGroup
@@ -27,13 +28,13 @@ MAX_LENGTH_TEXT_TRANSLATE = 2000  # limit for google translate at once
 # NEW_LINE = 'new_line'  # used for a moment to handle '\n's
 MATH_STUB = 'MATH_STUB'  # used to replace math formulas before auto-translation
 
-TEX_STUB = '<span = TEXSTUB /span>'  # used to replace short Tex commands within one piece of text
-TEX_SEP = '\n<span = TEXSEP /span>\n'  # used to separate pieces of text
-TOKEN_SEP = '<span = TOKENSEP /span>'  # used to separate consecutive tokens
+TEX_STUB = 'TEXSTUB%s'  # used to replace short Tex commands within one piece of text
+TEX_SEP = '\nTEXSEP%s\n'  # used to separate pieces of text
+TOKEN_SEP = ' TOKENSEP%s'  # used to separate consecutive tokens
 
-TEX_STUB_PAT = re.compile('< *\w+ *= *(?:TEXSTUB|ТЕКСТУБ) *\/ *\w+ *>')  # FIXME only for russian
-TEX_SEP_PAT = re.compile('\n< *\w+ *= *(?:TEXSEP|ТЕКСЕП) *\/ *\w+ *>\n')  # FIXME only for russian
-TOKEN_SEP_PAT = re.compile('< *\w+ *= *(?:TOKENSEP|ТОКЕНСЕП|ТОКЕНСЭП) *\/ *\w+ *>')  # FIXME only for russian
+TEX_STUB_PAT = re.compile('(?:TEXSTUB|ТЕКСТУБ)\d+')  # FIXME only for russian
+TEX_SEP_PAT = re.compile('\n(?:TEXSEP|ТЕКСЕП)\d+\n')  # FIXME only for russian
+TOKEN_SEP_PAT = re.compile('(?: ?TOKENSEP|ТОКЕНСЕП|ТОКЕНСЕР|ТОКЕНСЭП)\d+')  # FIXME only for russian
 
 NEW_LINE = 'NEW_LINE'  # used for a moment to handle '\n's
 
@@ -191,14 +192,14 @@ def lsplit_long_text(text: str, limit=MAX_LENGTH_TEXT_TRANSLATE):
 
 
 def google_translate_text(text: str, src_lang=SRC_LANG, dst_lang=DST_LANG) -> str:
-    if len(text) > MAX_LENGTH_TEXT_TRANSLATE:
-        result = ""
-        rest_text = text
-        while len(rest_text) > MAX_LENGTH_TEXT_TRANSLATE:
-            small_text, sep, rest_text = lsplit_long_text(text)
-            result += google_translate_text(small_text, src_lang, dst_lang)
-            result += sep
-        return result
+    # if len(text) > MAX_LENGTH_TEXT_TRANSLATE:
+    #     result = ""
+    #     rest_text = text
+    #     while len(rest_text) > MAX_LENGTH_TEXT_TRANSLATE:
+    #         small_text, sep, rest_text = lsplit_long_text(text)
+    #         result += google_translate_text(small_text, src_lang, dst_lang)
+    #         result += sep
+    #     return result
 
     # FIXME after several frequent requests it will ban your IP, what about proxies?
     print("Translating text of length %s" % len(text))
@@ -311,7 +312,10 @@ class Chunk:
         parts = list(parts)
 
         # We suppose tokens list was [Token, *, Token, *, .., Token]
-        assert 2*len(parts)-1 == len(self.tokens)
+        try:
+            assert 2*len(parts)-1 == len(self.tokens)
+        except AssertionError as e:
+            logging.error(f"Couldn't build after translation. {e}")
         ix = 0
         for t in self.tokens:
             if isinstance(t, Token):
@@ -327,17 +331,20 @@ class Chunker:
     # \aligned ???
     # \begin{array}{this argument}
     ignore_texnodes = [
-        'label', 'cite', 'color', 'bibliography', 'thebibliography', 'bibliographystyle', 'ref', 'eqref', '$', 'href',
+        'label', 'cite', 'citep', 'citet', 'algname', 'color', 'draw',
+        'bibliography', 'thebibliography', 'bibliographystyle', 'ref', 'eqref', '$', 'href',
         'usepackage', 'addbibresource',  # preamble - do we translate it at all?
         'tabular',  # to prevent translating '&' as 'and'
         'algorithm',  # to prevent translating keywords FIXME some text could be inside?
         'equation',  # to prevent translating keywords FIXME some text could be inside?
+        'equation*',  # to prevent translating keywords FIXME some text could be inside?
         'align',  # to prevent translating keywords FIXME some text could be inside?
         'align*',  # to prevent translating keywords FIXME some text could be inside?
     ]
 
     def __init__(self):
         self.chunks = [Chunk()]  # sequence of tokens and stubs lists to translate together
+        self.ctr = 0
 
     def parse_node(self, elem: TexNode, chunk=None):
         if chunk is None:
@@ -353,14 +360,16 @@ class Chunker:
                 self.parse_node(e, new_chunk)
 
             if new_chunk.is_empty():
-                chunk.append_stub(TEX_STUB)
+                chunk.append_stub(TEX_STUB % self.ctr)
+                self.ctr += 1
             elif False:
                 # TODO in some cases we want to embed parts into chunk, e.g.
                 # \textit{...}, etc
                 # {\em ...} and other simple BraceGroups
                 pass
             else:
-                chunk.append_stub(TEX_SEP)
+                chunk.append_stub(TEX_SEP % self.ctr)
+                self.ctr += 1
 
         elif isinstance(elem, Token):
             # Append to current chunk
@@ -383,7 +392,8 @@ class Chunker:
                 if isinstance(t, Token):
                     if not prev_token_was_separator:
                         # Consecutive tokens w/o separator
-                        tokens.append(TOKEN_SEP)
+                        tokens.append(TOKEN_SEP % self.ctr)
+                        self.ctr += 1
                     tokens.append(t)
                     prev_token_was_separator = False
                 else:  # is separator
@@ -448,7 +458,8 @@ class Chunker:
                 cur_len = size
             else:
                 # Concatenate chunk
-                cur_chunk.append_stub(TEX_SEP)
+                cur_chunk.append_stub(TEX_SEP % self.ctr)
+                self.ctr += 1
                 cur_chunk.tokens.extend(chunk.tokens)
         if cur_chunk:
             chunks.append(cur_chunk)
@@ -477,6 +488,11 @@ def translate_via_texsoup(source_path, output_path, input_lang=SRC_LANG, output_
     assert input_lang in checked_langs and output_lang in checked_langs
     with open(source_path, 'r') as f:
         source_text = f.read()
+
+    # FIXME hack to avoid errors due to '\left(' etc.
+    #  "(\\left|\\right|\\big)(\(|\)|\\\{|\\\}|\[|\]|)" -> "$1$2 "
+    prepare_pat = re.compile(r"(\\left|\\right|\\big)(\(|\)|\\{|\\}|\[|\])")
+    source_text = prepare_pat.sub(r"\1\2 ", source_text)
 
     # FIXME TexSoup has many bugs, see https://github.com/alvinwan/TexSoup/issues
     soup = TexSoup(source_text, tolerance=0)
@@ -545,7 +561,6 @@ if __name__ == '__main__':
     # translate_via_texsoup('../data/abstracts2.tex', '../data/final2.tex')
     # translate_via_texsoup('../data/conference_101719.tex', '../data/final.tex')
     # translate_via_texsoup('../data/pmetemplate03.tex', '../data/final.tex')
-    translate_via_texsoup('../data/Гасн/draft/final.tex', '../data/Гасн/draft/final2.tex')
+    # translate_via_texsoup('../data/Гасн/draft/final.tex', '../data/Гасн/draft/final2.tex')
+    translate_via_texsoup('../data/Гасн/NeurIPS 2021/main.tex', '../data/Гасн/NeurIPS 2021/main_ru.tex')
 
-    # FIXME hack to avoid errors due to '\left(' etc.
-    #  "(\\left|\\right|\\big)(\(|\)|\\\{|\\\}|\[|\]|)" -> "$1$2 "
